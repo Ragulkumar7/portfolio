@@ -379,8 +379,10 @@
     var h = [];
 
     if (pdf.available && pdf.path) {
+      var pdfName = String(pdf.path).split('/').pop();
       h.push('<div class="resume__actions">',
-        '<a class="resume__btn" href="' + escText(pdf.path) + '" download>Download PDF</a>',
+        '<a class="resume__btn" href="' + escText(pdf.path) +
+        '" download="Ragul_Kumar_Resume.pdf">Download PDF</a>',
         '<a class="resume__btn resume__btn--ghost" href="' + escText(pdf.path) +
         '" target="_blank" rel="noopener">Open in new tab</a></div>');
       h.push('<div class="resume__preview">',
@@ -389,7 +391,7 @@
         '<a class="resume__link" href="' + escText(pdf.path) + '" download>download it instead</a>.</p>',
         '</object></div>');
       h.push('<div class="resume__preview-card">',
-        '<p class="resume__preview-card-title">Ragul-Kumar-Resume.pdf</p>',
+        '<p class="resume__preview-card-title">' + escText(pdfName) + '</p>',
         '<p class="resume__preview-card-note">The PDF isn’t embedded on small screens — use the buttons above.</p>',
         '</div>');
     } else {
@@ -398,8 +400,11 @@
       h.push('<p class="resume__todo" data-todo>TODO: add resume PDF to assets/resume/</p>');
     }
 
-    /* text summary built from data.js so it can’t drift */
-    h.push('<div class="resume__summary">',
+    /* text summary built from data.js so it can’t drift — kept in a
+       closed <details> ("Text version"); forced open while printing */
+    h.push('<details class="resume__details">',
+      '<summary class="resume__summary-head">Text version</summary>',
+      '<div class="resume__summary">',
       '<div class="section-head eyebrow" data-reveal=""><h2>(Summary)</h2></div>',
       '<div class="resume__grid">');
 
@@ -452,13 +457,25 @@
       '<p class="resume__p"><a class="resume__link" href="mailto:' + escText(data.email) +
       '">' + escText(data.email) + '</a></p></div>');
 
-    h.push('</div></div>');
+    h.push('</div></div></details>');
     host.innerHTML = h.join('');
 
-    /* "Save as PDF" → browser print dialog (print styles in style.css) */
+    /* "Save as PDF" → browser print dialog (print styles in style.css);
+       the closed <details> opens for printing and restores afterwards */
     qsa('[data-print]', host).forEach(function (btn) {
       btn.addEventListener('click', function () { window.print(); });
     });
+    var det = qs('details.resume__details', host);
+    if (det) {
+      var wasOpen = false;
+      window.addEventListener('beforeprint', function () {
+        wasOpen = det.open;
+        det.open = true;
+      });
+      window.addEventListener('afterprint', function () {
+        if (!wasOpen) det.open = false;
+      });
+    }
   })();
 
   /* github ------------------------------------------------------------ */
@@ -827,13 +844,24 @@
         return '<span class="list__item">' + escText(s) + '</span>';
       }).join('');
     }
-    var cl = qs('[data-about="callout-lead"]');
-    if (cl) cl.textContent = a.calloutLead || '';
-    var ct = qs('[data-about="callout-text"]');
-    if (ct && a.calloutText) {
-      ct.innerHTML = a.calloutText.map(function (p) {
-        return '<p>' + escText(p) + '</p>';
-      }).join('');
+
+    /* (Now) / (Before) cards — built from the experience timeline so
+       employer, role and dates can never drift (replaces the callout) */
+    var cards = qs('[data-about="cards"]');
+    if (cards) {
+      var roles = (DATA.experience || {}).roles || [];
+      function aboutCard(tag, role) {
+        if (!role) return '';
+        return '<a class="about-card" href="experience.html" data-cursor="Open"' +
+          transAttr('Experience', 'Work history') + '>' +
+          '<span class="about-card__tag eyebrow">(' + tag + ')</span>' +
+          '<span class="about-card__arrow" aria-hidden="true">→</span>' +
+          '<span class="about-card__org">' + escText(role.org || '') + '</span>' +
+          '<span class="about-card__role">' + escText(role.title) + '</span>' +
+          '<span class="about-card__dates">' + escText(tRange(role.label)) + '</span>' +
+          '</a>';
+      }
+      cards.innerHTML = aboutCard('Now', roles[0]) + aboutCard('Before', roles[1]);
     }
   })();
 
@@ -877,6 +905,28 @@
         console.info('[portfolio] no image for slot "' + key + '" — placeholder stays');
       }
     });
+  })();
+
+  /* case pages: optional "Built at" row from projects[].employer ----- */
+
+  (function caseEmployer() {
+    var sec = qs('.case-study');
+    if (!sec) return;
+    var m = /\/([a-z0-9-]+)\.html(?:[?#]|$)/.exec(location.pathname);
+    if (!m) return;
+    var pr = null;
+    var list = DATA.projects || [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].slug === m[1]) { pr = list[i]; break; }
+    }
+    if (!pr || !pr.employer) return;
+    var dl = qs('.case-study__details', sec);
+    if (!dl) return;
+    var row = doc.createElement('div');
+    row.setAttribute('data-reveal', '');
+    row.innerHTML = '<dt class="case-study__detail-label eyebrow">Built at</dt>' +
+      '<dd class="case-study__detail-value">' + escText(pr.employer) + '</dd>';
+    dl.appendChild(row);
   })();
 
   /* ------------------------------------------------------ reveal system */

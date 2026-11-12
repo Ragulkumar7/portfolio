@@ -2881,7 +2881,7 @@ html[data-js][data-motion=on]:not([data-motion-failed]) .statement__word {
 
 .media-block__layer {
   position: absolute;
-  inset: -14% 0;
+  inset: 0;
 }
 
 .columns__column .media-block {
@@ -5552,8 +5552,167 @@ html[data-motion=off] .link-list__card {
 }
 
 /* ==========================================================================
-   Amendment round — showTodos gating + current-work case links
+   Amendment round — portrait, about layout, resume PDF, print details
    ========================================================================== */
+
+/* portrait: exact 4:5 frame, face kept in frame */
+.media-block__frame {
+  aspect-ratio: 4 / 5;
+}
+
+.media-block__frame .img-fill {
+  object-position: 50% 30%;
+}
+
+.media-block__caption {
+  color: var(--color-label);
+  font-family: var(--font-mono);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin: 14px 0 0;
+  font-size: 12px;
+}
+
+/* about: (Now)/(Before) cards */
+.about-cards {
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: clamp(20px, 3vw, 32px);
+  padding-top: clamp(40px, 7vh, 80px);
+  padding-inline: var(--spacing-gutter);
+  display: grid;
+}
+
+.about-card {
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-card);
+  color: var(--color-text);
+  text-decoration: none;
+  align-items: flex-start;
+  gap: 10px;
+  padding: clamp(20px, 2.5vw, 30px);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: border-color .3s;
+}
+
+.about-card:hover {
+  border-color: var(--color-accent);
+}
+
+.about-card__org {
+  color: var(--color-label);
+  font-family: var(--font-mono);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.about-card__role {
+  letter-spacing: -.01em;
+  font-variation-settings: var(--fvs-row);
+  padding-right: 28px;
+  font-size: clamp(24px, 2.4vw, 32px);
+  line-height: 1.05;
+}
+
+.about-card__dates {
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.about-card__arrow {
+  color: var(--color-accent);
+  transition: transform .5s var(--ease-out);
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  font-size: 18px;
+}
+
+.about-card:hover .about-card__arrow {
+  transform: translate(4px, -4px);
+}
+
+/* about: (What I do) rows + (Toolkit) + action row */
+.about-services {
+  padding-top: clamp(40px, 7vh, 80px);
+}
+
+.about-toolkit-section {
+  padding-top: clamp(40px, 7vh, 80px);
+  padding-inline: var(--spacing-gutter);
+}
+
+.about-toolkit {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.about-actions {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: clamp(40px, 7vh, 80px);
+  padding-bottom: clamp(60px, 10vh, 120px);
+  padding-inline: var(--spacing-gutter);
+  display: flex;
+}
+
+@media (max-width:700px) {
+  /* portrait first, full width, no sticky on mobile */
+  .columns__column > .media-block--sticky {
+    position: static;
+  }
+  .media-block__frame {
+    width: min(100%, calc(70vh * .8));
+    margin-inline: auto;
+  }
+  .about-toolkit {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* resume: one-page PDF preview, centred, no nested scrollbar */
+.resume__object {
+  width: min(100%, 860px);
+  height: auto;
+  aspect-ratio: 8.5 / 11.6;
+  margin: 0 auto;
+}
+
+/* resume: text summary in a closed <details> */
+.resume__summary-head {
+  color: var(--color-label);
+  font-family: var(--font-mono);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  justify-content: space-between;
+  padding: 14px 0;
+  list-style: none;
+  font-size: 12px;
+  display: flex;
+}
+
+.resume__summary-head::-webkit-details-marker {
+  display: none;
+}
+
+.resume__summary-head::after {
+  color: var(--color-accent);
+  content: "+";
+}
+
+details.resume__details[open] > .resume__summary-head::after {
+  content: "\2212";
+}
+
+@media print {
+  .resume__summary-head {
+    display: none;
+  }
+}
 
 /* html gets data-todos-on only while site.showTodos is true; while it's
    absent every static TODO placeholder block stays hidden */

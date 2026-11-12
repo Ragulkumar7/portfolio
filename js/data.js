@@ -85,6 +85,7 @@
         slug: 'theworldofnerds', name: 'The World of Nerds',
         site: 'theworldofnerds.com', url: 'https://theworldofnerds.com',
         type: 'E-commerce', listType: 'E-commerce', platform: 'Shopify',
+        employer: '',
         year: 'TODO', role: 'TODO', client: 'TODO',
         desc: 'Anime and pop-culture collectibles store',
         altDesktop: 'The World of Nerds anime collectibles store on desktop',
@@ -94,6 +95,7 @@
         slug: 'evarrah', name: 'Evarrah',
         site: 'evarrah.com', url: 'https://evarrah.com',
         type: 'Shopify store', listType: 'Shopify store', platform: '',
+        employer: 'Huemind',
         year: 'TODO', role: 'TODO', client: 'TODO',
         desc: 'Shopify store',
         altDesktop: 'Evarrah ethnic wear store on desktop',
@@ -104,6 +106,7 @@
         site: 'opalline.com', url: 'https://opalline.com',
         type: 'Billing software + Shopify store', listType: 'Billing software',
         platform: '',
+        employer: 'Huemind',
         year: 'TODO', role: 'TODO', client: 'TODO',
         desc: 'Billing software with a live demo, plus a Shopify store',
         altDesktop: 'Opal Line Billing demo on desktop',
@@ -113,8 +116,9 @@
         slug: 'anichamboutique', name: 'Anicham Boutique',
         site: 'anichamboutique.com', url: 'https://anichamboutique.com',
         type: 'E-commerce', listType: 'E-commerce', platform: 'Shopify',
+        employer: '',
         year: 'TODO', role: 'TODO', client: 'TODO',
-        desc: 'E-commerce',
+        desc: 'E-commerce with custom CMS',
         altDesktop: 'Anicham Boutique women’s ethnic wear store on desktop',
         altMobile: 'Anicham Boutique women’s ethnic wear store on mobile'
       },
@@ -122,6 +126,7 @@
         slug: 'rupnidhi', name: 'Rupnidhi',
         site: 'rupnidhi.com', url: 'https://rupnidhi.com',
         type: 'Web app design & build', listType: 'Web app', platform: 'PHP · MySQL',
+        employer: '',
         year: 'TODO', role: 'TODO', client: 'TODO',
         desc: 'POS and GST billing platform',
         altDesktop: 'Rupnidhi GST billing software dashboard on desktop',
@@ -131,6 +136,7 @@
         slug: 'swarnalagna', name: 'Swarna Lagna',
         site: 'swarnalagna.com', url: 'https://swarnalagna.com',
         type: 'Website design & build', listType: 'Website', platform: 'Static site',
+        employer: 'Neoera Infotech',
         year: 'TODO', role: 'TODO', client: 'TODO',
         desc: 'Matrimony website',
         altDesktop: 'Swarna Lagna matrimony website homepage on desktop',
@@ -140,6 +146,7 @@
         slug: 'voiceofjagadguru', name: 'Voice of Jagadguru',
         site: 'voiceofjagadguru.com', url: 'https://voiceofjagadguru.com',
         type: 'Website with a CMS', listType: 'Website', platform: '',
+        employer: 'Neoera Infotech',
         year: 'TODO', role: 'TODO', client: 'TODO',
         desc: 'Complete website with a CMS so the owners publish content themselves',
         altDesktop: 'Voice of Jagadguru website on desktop',
@@ -149,6 +156,7 @@
         slug: 'v4startup', name: 'V4 Startup',
         site: 'v4startup.com', url: 'https://v4startup.com',
         type: 'CRM', listType: 'CRM', platform: '',
+        employer: 'Neoera Infotech',
         year: 'TODO', role: 'TODO', client: 'TODO',
         desc: 'CRM with separate dashboards for admins, employees and clients',
         altDesktop: 'V4 Startup website on desktop',
@@ -158,8 +166,9 @@
         slug: 'workack', name: 'Workack',
         site: 'workack.com', url: 'https://workack.com',
         type: 'Web app design & build', listType: 'Web app', platform: 'PHP · MySQL',
+        employer: '',
         year: 'TODO', role: 'TODO', client: 'TODO',
-        desc: 'CRM and HR dashboard',
+        desc: 'CRM, HR and Sales dashboard',
         altDesktop: 'Workack HR and payroll platform homepage on desktop',
         altMobile: 'Workack HR and payroll platform on mobile'
       }
@@ -170,14 +179,12 @@
     about: {
       lead: 'I’m Ragul, a full-stack and Shopify developer. I build the whole thing: the database, the back end, the dashboards, the storefront and the pages people actually see. TODO: review',
       paras: [
-        'At Huemind, since June 2026, I build Shopify stores and Opalline, a billing software. Before that, at Neoera Infotech from July 2025 to April 2026, I built business platforms: Rupnidhi (POS and GST billing), Workack (CRM and HR dashboard) and Anicham Boutique (e-commerce), plus a blog CMS that syndicates posts across three sites. TODO: review',
+        'At Huemind, since August 2026, I build Shopify stores and Opalline, a billing software. Before that, at Neoera Infotech from July 2025 to April 2026, I built business platforms: Rupnidhi (POS and GST billing), Workack (CRM, HR and Sales dashboard), an e-commerce platform with custom CMS for Anicham Boutique, and a Blog CMS syndicating content across 3 websites. TODO: review',
         'I’ve also built a complete CRM with separate dashboards for admins, employees and clients, and a complete website with a CMS so the team publishes content themselves. Design is part of the job, but only part of it. TODO: review'
       ],
       toolkit: ['React.js', 'TypeScript', 'JavaScript', 'Node.js', 'PHP', 'Shopify',
                 'Liquid', 'Tailwind CSS', 'GraphQL', 'PostgreSQL', 'MySQL', 'MongoDB',
-                'AWS', 'Docker', 'Git'],
-      calloutLead: 'Full Stack & Shopify Developer at Huemind.',
-      calloutText: ['Since June 2026. Before that, Neoera Infotech — July 2025 to April 2026.']
+                'AWS', 'Docker', 'Git']
     },
 
     /* skills.html — groups and names mirror chandruuuu.vercel.app/skills
@@ -240,28 +247,33 @@
       workTitle: 'Work history',
       roles: [
         {
-          label: 'Jun 2026 — Present',
+          label: 'Aug 2026 — Present',
           title: 'Full Stack & Shopify Developer',
           org: 'Huemind, Dharmapuri, Tamil Nadu',
-          duties: ['Shopify stores (evarrah.com, opalline.com)',
-                   'Opalline billing software'],
+          duties: [
+            'Develop and customize Shopify websites for clients, including theme customization and Liquid-based dynamic rendering.',
+            'Set up Shopify stores (products, collections, variants, navigation, payment gateways) and integrate and customize apps.'
+          ],
           stack: 'TODO'
         },
         {
           label: 'Sep 2025 — Apr 2026',
           title: 'Full-Stack Developer',
           org: 'Neoera Infotech',
-          duties: ['Rupnidhi (POS and GST billing platform)',
-                   'Workack (CRM and HR dashboard)',
-                   'Anicham Boutique (e-commerce)',
-                   'A blog CMS that syndicates posts across three sites'],
+          duties: [
+            'Delivered 15+ production full-stack web projects for clients, including backend development, database design, hosting and deployment.',
+            'Engineered Rupnidhi (POS and GST billing), Workack (CRM, HR and Sales dashboard), an e-commerce platform with custom CMS for Anicham Boutique, and a Blog CMS syndicating content across 3 websites.',
+            'Built secure admin backends for Voice of Jagadguru and Divasprik, an Attendance Portal, V4Startup with a PSG variant, and responsive brand websites for Swarnalagna and Virmodello.'
+          ],
           stack: 'TODO'
         },
         {
           label: 'Jul 2025 — Aug 2025',
           title: 'Intern Developer',
           org: 'Neoera Infotech',
-          duties: [],
+          duties: [
+            'Completed a 2-month project training in web designing and development, applying it to real-world problems in hosting and deployment.'
+          ],
           stack: 'TODO'
         }
       ],
@@ -307,12 +319,12 @@
       { title: 'C Programming', issuer: 'CSC', date: 'TODO', credentialId: 'TODO', verifyUrl: '', image: '' }
     ],
 
-    /* resume.html — no PDF in assets/resume/ yet, so available: false
-       shows the Save as PDF button (window.print()) plus the on-page
-       HTML resume. Drop a file in assets/resume/, set path to it and
-       available to true to switch to Download/Open + inline preview. */
+    /* resume.html — the one-page PDF lives in assets/resume/ (the .docx
+       beside it is never linked). available:true enables Download/Open
+       and the inline preview; the text summary stays in a closed
+       <details> titled "Text version". */
     resume: {
-      pdf: { path: 'assets/resume/Ragul-Kumar-Resume.pdf', available: false },
+      pdf: { path: 'assets/resume/Ragul_Kumar_OnePage.pdf', available: true },
       name: 'Ragul Kumar',
       role: 'Full-Stack & Shopify Developer',
       email: 'ragulthedeveloper@gmail.com'
