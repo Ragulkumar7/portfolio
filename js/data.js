@@ -2,9 +2,18 @@
    data.js — runtime data for the Ragul Kumar portfolio
 
    The image map is resolved relative to this script's own URL so every
-   page (/, /work/, /services/) can share a single copy. Only screenshot
-   files that actually exist in assets/img/ are listed — missing shots
-   leave the SVG placeholders visible instead of showing broken images.
+   page (/, /work/, /services/, /skills, …) can share a single copy.
+   Only screenshot files that actually exist in assets/img/ are listed —
+   missing shots leave the SVG placeholders visible instead of showing
+   broken images.
+
+   Everything the pages render lives here: site flags, hero line,
+   statement, marquee words, projects (the work index order), skills,
+   about copy, experience, certificates, resume and github.
+
+   site.showTodos: false hides every user-facing "TODO" (fields render
+   empty, "TODO: review" suffixes are stripped, [data-todo] blocks are
+   hidden). Set it to true to see the placeholders again.
    ===================================================================== */
 (function () {
   'use strict';
@@ -22,14 +31,306 @@
   }
 
   var IMG = 'assets/img/';
-  var files = ['workack-desktop.webp', 'workack-mobile.webp', 'rupnidhi-desktop.webp', 'rupnidhi-mobile.webp', 'swarnalagna-desktop.webp', 'swarnalagna-mobile.webp', 'theworldofnerds-desktop.webp', 'theworldofnerds-mobile.webp', 'anichamboutique-desktop.webp', 'anichamboutique-mobile.webp'];
+  var files = [
+    'theworldofnerds-desktop.webp', 'theworldofnerds-mobile.webp',
+    'evarrah-desktop.png', 'evarrah-mobile.png',
+    'opalline-desktop.png', 'opalline-mobile.png',
+    'anichamboutique-desktop.webp', 'anichamboutique-mobile.webp',
+    'rupnidhi-desktop.webp', 'rupnidhi-mobile.webp',
+    'swarnalagna-desktop.webp', 'swarnalagna-mobile.webp',
+    'voiceofjagadguru-desktop.png', 'voiceofjagadguru-mobile.png',
+    'v4startup-desktop.png', 'v4startup-mobile.png',
+    'workack-desktop.webp', 'workack-mobile.webp'
+  ];
 
   var images = {};
   for (var i = 0; i < files.length; i++) {
-    images[files[i].replace(/\.webp$/, '')] = asset(IMG + files[i]);
+    images[files[i].replace(/\.(webp|png)$/, '')] = asset(IMG + files[i]);
   }
 
   window.PORTFOLIO = {
-    images: images
+    images: images,
+
+    /* site-wide flags + home hero line */
+    site: {
+      showTodos: false,
+      heroLine: 'I build CRMs, billing software and Shopify stores that businesses run on.'
+    },
+
+    /* short intro line under each new page's title */
+    intros: {
+      skills: 'Languages, frameworks and tools I use day to day, grouped by area.',
+      experience: 'Where I’ve worked and what I’ve built.',
+      certificates: 'Six certificates from courses I’ve completed.',
+      resume: 'Skills, experience, projects and education — summarised on one page.',
+      github: 'My public repositories on GitHub, fetched live from the API.'
+    },
+
+    /* home marquee — every word must also exist in skills below */
+    marquee: ['React.js', 'TypeScript', 'JavaScript', 'Node.js', 'PHP', 'Shopify',
+              'Tailwind CSS', 'GraphQL', 'PostgreSQL', 'MongoDB', 'AWS', 'Docker'],
+
+    /* home statement (the "(Hello)" scrub section) */
+    statement: {
+      text: 'I’m Ragul. I build full-stack web apps, CRMs and Shopify stores, from database to storefront. Separate dashboards for admins, employees and clients, and content your team can publish themselves.',
+      italic: ['database', 'storefront'],
+      accent: 'themselves.'
+    },
+
+    /* work index order — also drives home rows, dock, up-close, resume.
+       year/role/client stay 'TODO' until supplied (hidden while
+       site.showTodos is false). */
+    projects: [
+      {
+        slug: 'theworldofnerds', name: 'The World of Nerds',
+        site: 'theworldofnerds.com', url: 'https://theworldofnerds.com',
+        type: 'E-commerce', listType: 'E-commerce', platform: 'Shopify',
+        year: 'TODO', role: 'TODO', client: 'TODO',
+        desc: 'Anime and pop-culture collectibles store',
+        altDesktop: 'The World of Nerds anime collectibles store on desktop',
+        altMobile: 'The World of Nerds anime collectibles store on mobile'
+      },
+      {
+        slug: 'evarrah', name: 'Evarrah',
+        site: 'evarrah.com', url: 'https://evarrah.com',
+        type: 'Shopify store', listType: 'Shopify store', platform: '',
+        year: 'TODO', role: 'TODO', client: 'TODO',
+        desc: 'Shopify store',
+        altDesktop: 'Evarrah ethnic wear store on desktop',
+        altMobile: 'Evarrah ethnic wear store on mobile'
+      },
+      {
+        slug: 'opalline', name: 'Opalline',
+        site: 'opalline.com', url: 'https://opalline.com',
+        type: 'Billing software + Shopify store', listType: 'Billing software',
+        platform: '',
+        year: 'TODO', role: 'TODO', client: 'TODO',
+        desc: 'Billing software with a live demo, plus a Shopify store',
+        altDesktop: 'Opal Line Billing demo on desktop',
+        altMobile: 'Opal Line Billing demo on mobile'
+      },
+      {
+        slug: 'anichamboutique', name: 'Anicham Boutique',
+        site: 'anichamboutique.com', url: 'https://anichamboutique.com',
+        type: 'E-commerce', listType: 'E-commerce', platform: 'Shopify',
+        year: 'TODO', role: 'TODO', client: 'TODO',
+        desc: 'E-commerce',
+        altDesktop: 'Anicham Boutique women’s ethnic wear store on desktop',
+        altMobile: 'Anicham Boutique women’s ethnic wear store on mobile'
+      },
+      {
+        slug: 'rupnidhi', name: 'Rupnidhi',
+        site: 'rupnidhi.com', url: 'https://rupnidhi.com',
+        type: 'Web app design & build', listType: 'Web app', platform: 'PHP · MySQL',
+        year: 'TODO', role: 'TODO', client: 'TODO',
+        desc: 'POS and GST billing platform',
+        altDesktop: 'Rupnidhi GST billing software dashboard on desktop',
+        altMobile: 'Rupnidhi GST billing software on mobile'
+      },
+      {
+        slug: 'swarnalagna', name: 'Swarna Lagna',
+        site: 'swarnalagna.com', url: 'https://swarnalagna.com',
+        type: 'Website design & build', listType: 'Website', platform: 'Static site',
+        year: 'TODO', role: 'TODO', client: 'TODO',
+        desc: 'Matrimony website',
+        altDesktop: 'Swarna Lagna matrimony website homepage on desktop',
+        altMobile: 'Swarna Lagna matrimony website on mobile'
+      },
+      {
+        slug: 'voiceofjagadguru', name: 'Voice of Jagadguru',
+        site: 'voiceofjagadguru.com', url: 'https://voiceofjagadguru.com',
+        type: 'Website with a CMS', listType: 'Website', platform: '',
+        year: 'TODO', role: 'TODO', client: 'TODO',
+        desc: 'Complete website with a CMS so the owners publish content themselves',
+        altDesktop: 'Voice of Jagadguru website on desktop',
+        altMobile: 'Voice of Jagadguru website on mobile'
+      },
+      {
+        slug: 'v4startup', name: 'V4 Startup',
+        site: 'v4startup.com', url: 'https://v4startup.com',
+        type: 'CRM', listType: 'CRM', platform: '',
+        year: 'TODO', role: 'TODO', client: 'TODO',
+        desc: 'CRM with separate dashboards for admins, employees and clients',
+        altDesktop: 'V4 Startup website on desktop',
+        altMobile: 'V4 Startup website on mobile'
+      },
+      {
+        slug: 'workack', name: 'Workack',
+        site: 'workack.com', url: 'https://workack.com',
+        type: 'Web app design & build', listType: 'Web app', platform: 'PHP · MySQL',
+        year: 'TODO', role: 'TODO', client: 'TODO',
+        desc: 'CRM and HR dashboard',
+        altDesktop: 'Workack HR and payroll platform homepage on desktop',
+        altMobile: 'Workack HR and payroll platform on mobile'
+      }
+    ],
+
+    /* about.html — drafts carry a "TODO: review" suffix (stripped while
+       site.showTodos is false). toolkit entries are pulled from skills. */
+    about: {
+      lead: 'I’m Ragul, a full-stack and Shopify developer. I build the whole thing: the database, the back end, the dashboards, the storefront and the pages people actually see. TODO: review',
+      paras: [
+        'At Huemind, since June 2026, I build Shopify stores and Opalline, a billing software. Before that, at Neoera Infotech from July 2025 to April 2026, I built business platforms: Rupnidhi (POS and GST billing), Workack (CRM and HR dashboard) and Anicham Boutique (e-commerce), plus a blog CMS that syndicates posts across three sites. TODO: review',
+        'I’ve also built a complete CRM with separate dashboards for admins, employees and clients, and a complete website with a CMS so the team publishes content themselves. Design is part of the job, but only part of it. TODO: review'
+      ],
+      toolkit: ['React.js', 'TypeScript', 'JavaScript', 'Node.js', 'PHP', 'Shopify',
+                'Liquid', 'Tailwind CSS', 'GraphQL', 'PostgreSQL', 'MySQL', 'MongoDB',
+                'AWS', 'Docker', 'Git'],
+      calloutLead: 'Full Stack & Shopify Developer at Huemind.',
+      calloutText: ['Since June 2026. Before that, Neoera Infotech — July 2025 to April 2026.']
+    },
+
+    /* skills.html — groups and names mirror chandruuuu.vercel.app/skills
+       (source of truth); kept skills sit with their groups. level is
+       optional — never invent one; render only when set. */
+    skills: [
+      { name: 'Frontend Development', items: [
+        { name: 'HTML5' }, { name: 'CSS3' }, { name: 'JavaScript' },
+        { name: 'React.js' }, { name: 'AJAX' }
+      ] },
+      { name: 'Design', items: [
+        { name: 'Figma (UI/UX)' }, { name: 'Bootstrap' },
+        { name: 'Tailwind CSS' }, { name: 'Responsive' }
+      ] },
+      { name: 'Programming Languages', items: [
+        { name: 'Java' }, { name: 'JavaScript' }, { name: 'TypeScript' },
+        { name: 'Python' }, { name: 'OOP' }
+      ] },
+      { name: 'Backend Development', items: [
+        { name: 'Spring Boot' }, { name: 'Node.js' }, { name: 'Express.js' },
+        { name: 'PHP' }
+      ] },
+      { name: 'Shopify Development', items: [
+        { name: 'Liquid' }, { name: 'Online Store 2.0' }, { name: 'Shopify CLI' },
+        { name: 'Admin API' }, { name: 'GraphQL' }, { name: 'Sections' },
+        { name: 'Snippets' }, { name: 'Metafields' }, { name: 'Shopify' }
+      ] },
+      { name: 'API & Integration', items: [
+        { name: 'REST API' }, { name: 'JWT Auth' }, { name: 'Axios' },
+        { name: 'GraphQL' }
+      ] },
+      { name: 'Database Management', items: [
+        { name: 'PostgreSQL' }, { name: 'MySQL' }, { name: 'MongoDB' }
+      ] },
+      { name: 'Tools & Platforms', items: [
+        { name: 'VS Code' }, { name: 'Cursor' }, { name: 'Eclipse' },
+        { name: 'Postman' }
+      ] },
+      { name: 'AI Tools', items: [
+        { name: 'ChatGPT' }, { name: 'Claude' }, { name: 'Cursor' }
+      ] },
+      { name: 'Version Control & Collaboration', items: [
+        { name: 'Git' }, { name: 'GitHub' }, { name: 'GitHub Actions' }
+      ] },
+      { name: 'Cloud & Deployment', items: [
+        { name: 'AWS' }, { name: 'Vercel' }, { name: 'Docker' }
+      ] },
+      { name: 'Engineering Practices', items: [
+        { name: 'System Design' }, { name: 'Layered Arch.' }, { name: 'API Testing' },
+        { name: 'Agile' }, { name: 'Code Reviews' }
+      ] },
+      { name: 'Also', items: [
+        { name: 'Python (TensorFlow, OpenCV)' }, { name: 'IoT (ESP8266)' }
+      ] }
+    ],
+
+    /* experience.html — current position first, then Neoera roles, then
+       current work. Dates are real; stack stays TODO until supplied. */
+    experience: {
+      workTitle: 'Work history',
+      roles: [
+        {
+          label: 'Jun 2026 — Present',
+          title: 'Full Stack & Shopify Developer',
+          org: 'Huemind, Dharmapuri, Tamil Nadu',
+          duties: ['Shopify stores (evarrah.com, opalline.com)',
+                   'Opalline billing software'],
+          stack: 'TODO'
+        },
+        {
+          label: 'Sep 2025 — Apr 2026',
+          title: 'Full-Stack Developer',
+          org: 'Neoera Infotech',
+          duties: ['Rupnidhi (POS and GST billing platform)',
+                   'Workack (CRM and HR dashboard)',
+                   'Anicham Boutique (e-commerce)',
+                   'A blog CMS that syndicates posts across three sites'],
+          stack: 'TODO'
+        },
+        {
+          label: 'Jul 2025 — Aug 2025',
+          title: 'Intern Developer',
+          org: 'Neoera Infotech',
+          duties: [],
+          stack: 'TODO'
+        }
+      ],
+      /* current work — experience page only; hrefs point at the case pages */
+      currentWork: [
+        {
+          name: 'Opalline billing software',
+          desc: 'Billing software demo. TODO: review',
+          href: 'work/opalline.html',
+          links: [{ label: 'Live demo ↗', url: 'https://opal-line.onrender.com' }],
+          note: 'TODO: demo access'
+        },
+        {
+          name: 'Shopify projects',
+          desc: '',
+          href: 'work/evarrah.html',
+          links: [
+            { label: 'evarrah.com', url: 'https://evarrah.com' },
+            { label: 'opalline.com', url: 'https://opalline.com' }
+          ],
+          note: 'TODO: other Shopify projects'
+        }
+      ],
+      /* the one education line, resume.html only (experience page shows
+         the work timeline only) */
+      education: [
+        { label: '2025', title: 'MCA', desc: 'The Gandhigram Rural Institute' }
+      ]
+    },
+
+    /* certificates.html — six cards.
+       date / credentialId: fill in as "TODO" until known (hidden while
+       site.showTodos is false). verifyUrl: leave '' — the verify link
+       stays hidden until set. image: leave '' — a 4:3 gradient
+       placeholder shows; drop files in assets/img/certs/ and set e.g.
+       image: 'assets/img/certs/ai-agent-databricks.png'. */
+    certificates: [
+      { title: 'AI Agent Fundamentals', issuer: 'Databricks', date: 'TODO', credentialId: 'TODO', verifyUrl: '', image: '' },
+      { title: 'Agentic AI', issuer: 'agentacademy.ai', date: 'TODO', credentialId: 'TODO', verifyUrl: '', image: '' },
+      { title: 'AWS Cloud Quest', issuer: 'AWS', date: 'TODO', credentialId: 'TODO', verifyUrl: '', image: '' },
+      { title: 'Python', issuer: 'IIT Bombay', date: 'TODO', credentialId: 'TODO', verifyUrl: '', image: '' },
+      { title: 'Java', issuer: 'NPTEL', date: 'TODO', credentialId: 'TODO', verifyUrl: '', image: '' },
+      { title: 'C Programming', issuer: 'CSC', date: 'TODO', credentialId: 'TODO', verifyUrl: '', image: '' }
+    ],
+
+    /* resume.html — no PDF in assets/resume/ yet, so available: false
+       shows the Save as PDF button (window.print()) plus the on-page
+       HTML resume. Drop a file in assets/resume/, set path to it and
+       available to true to switch to Download/Open + inline preview. */
+    resume: {
+      pdf: { path: 'assets/resume/Ragul-Kumar-Resume.pdf', available: false },
+      name: 'Ragul Kumar',
+      role: 'Full-Stack & Shopify Developer',
+      email: 'ragulthedeveloper@gmail.com'
+    },
+
+    /* github.html — live fetch with a 10-minute sessionStorage cache.
+       The static fallback list only renders while site.showTodos is
+       true; replace the TODO rows with real repo data whenever you like. */
+    github: {
+      user: 'Ragulkumar7',
+      profileUrl: 'https://github.com/Ragulkumar7',
+      apiUser: 'https://api.github.com/users/Ragulkumar7',
+      apiRepos: 'https://api.github.com/users/Ragulkumar7/repos?per_page=100&sort=updated',
+      fallback: [
+        { name: 'TODO: repository name', description: 'TODO: one-line description', language: 'TODO', stars: 'TODO', updated: 'TODO', url: '' },
+        { name: 'TODO: repository name', description: 'TODO: one-line description', language: 'TODO', stars: 'TODO', updated: 'TODO', url: '' },
+        { name: 'TODO: repository name', description: 'TODO: one-line description', language: 'TODO', stars: 'TODO', updated: 'TODO', url: '' }
+      ]
+    }
   };
 })();

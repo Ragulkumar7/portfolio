@@ -84,7 +84,782 @@
   }
   function stopLoop() { if (running) { running = false; cancelAnimationFrame(rafId); } }
 
+  /* ------------------------------------------------------ page content */
+
+  var DATA = window.PORTFOLIO || {};
+
+  function escText(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function transAttr(name, sub) {
+    return ' data-transition-name="' + escText(name) + '" data-transition-sub="' + escText(sub) + '"';
+  }
+
+  /* skills items are { name, level? } objects (plain strings tolerated) */
+  function skillName(it) {
+    return typeof it === 'string' ? it : (it && it.name) || '';
+  }
+
+  /* ------------------------------------------------------- todo gating */
+  /* site.showTodos (data.js) drives every TODO surface. When false: field
+     helpers return empty, "TODO: review" suffixes are stripped, static
+     [data-todo] blocks are hidden by CSS, and the github fallback shows
+     only the profile link. One shared helper set for all renderers. */
+  var SHOW_TODOS = !!(DATA.site && DATA.site.showTodos);
+  if (SHOW_TODOS) root.setAttribute('data-todos-on', '');
+
+  /* field value — '' for TODO placeholders while hidden */
+  function tVal(v) {
+    if (v == null) return '';
+    var s = String(v);
+    if (SHOW_TODOS) return s;
+    return /^\s*TODO\b/i.test(s) ? '' : s;
+  }
+
+  /* copy that may carry a "TODO: review" suffix */
+  function tReview(s) {
+    s = String(s == null ? '' : s);
+    return SHOW_TODOS ? s : s.replace(/\s*TODO: review/g, '');
+  }
+
+  /* date range — omitted when either end is missing while hidden */
+  function tRange(label) {
+    if (label == null) return '';
+    if (SHOW_TODOS) return String(label);
+    return /TODO/i.test(String(label)) ? '' : String(label);
+  }
+
+  /* image tag with a data.js slot (a missing file keeps the placeholder) */
+  function imgTag(alt, slot, ph) {
+    return '<img class="img-fill" data-slot="' + escText(slot) + '" src="assets/img/' + ph +
+      '" alt="' + escText(alt) + '" loading="lazy" decoding="async">';
+  }
+
+  /* kinetic letter spans for a plain word (JS-rendered page titles) */
+  function kineticLetters(word, k) {
+    return String(word).split('').map(function (c) {
+      return '<span class="kinetic__letter" data-char="' + escText(c) +
+        '" data-k="' + k + '" data-in=""></span>';
+    }).join('');
+  }
+
+  /* page-title intro lines come from data.js */
+  qsa('[data-page-intro]').forEach(function (el) {
+    var text = (DATA.intros || {})[el.getAttribute('data-page-intro')];
+    if (text) { el.textContent = text; el.setAttribute('data-reveal', ''); }
+  });
+
+  /* skills ------------------------------------------------------------ */
+
+  (function skillsPage() {
+    var host = qs('[data-render="skills"]');
+    var groups = DATA.skills;
+    if (!host || !groups || !groups.length) return;
+    var h = ['<div class="section-head eyebrow" data-reveal="">',
+      '<h2 class="skills__label">(Skills by group)</h2>',
+      '<span>' + pad2(groups.length) + ' groups</span></div>',
+      '<div class="skills__rows">'];
+    groups.forEach(function (g, i) {
+      h.push('<div class="skills__row" data-reveal="">',
+        '<div class="service-tiles__fill" aria-hidden="true"></div>',
+        '<span class="skills__num">' + pad2(i + 1) + '</span>',
+        '<h3 class="skills__name">' + escText(g.name) + '</h3>',
+        '<span class="skills__count">(' + pad2(g.items.length) + ')</span>',
+        '<ul class="skills__chips chip-list">');
+      g.items.forEach(function (it) {
+        var nm = skillName(it);
+        var lv = (it && typeof it === 'object' && it.level) ? it.level : '';
+        h.push('<li class="chip">' + escText(nm) +
+          (lv ? '<span class="chip__level">' + escText(lv) + '</span>' : '') + '</li>');
+      });
+      h.push('</ul></div>');
+    });
+    h.push('</div>');
+    host.innerHTML = h.join('');
+  })();
+
+  /* experience -------------------------------------------------------- */
+
+  (function experiencePage() {
+    var host = qs('[data-render="experience"]');
+    var data = DATA.experience;
+    if (!host || !data) return;
+    var h = [];
+
+    function timeline(eyebrow, title, lead, items) {
+      var out = ['<section class="process-timeline">',
+        '<div class="process-timeline__intro" data-reveal="">',
+        '<span class="process-timeline__eyebrow eyebrow">' + eyebrow + '</span>',
+        '<h2 class="process-timeline__title">' + title + '</h2>'];
+      if (lead) out.push('<p class="process-timeline__lead">' + lead + '</p>');
+      out.push('</div>',
+        '<div class="process-timeline__steps">',
+        '<div class="process-timeline__track" aria-hidden="true"></div>',
+        '<div class="process-timeline__line" aria-hidden="true"></div>',
+        '<ol class="process-timeline__list">');
+      out = out.concat(items);
+      out.push('</ol></div></section>');
+      return out;
+    }
+
+    var roleItems = (data.roles || []).map(function (role) {
+      var li = ['<li class="process-timeline__step">',
+        '<span class="process-timeline__diamond" aria-hidden="true"></span>'];
+      var lab = tRange(role.label);
+      if (lab) li.push('<span class="process-timeline__label">' + escText(lab) + '</span>');
+      li.push('<h3 class="process-timeline__step-title">' + escText(role.title) + '</h3>');
+      if (role.org) li.push('<p class="process-timeline__org">' + escText(role.org) + '</p>');
+      var duties = (role.duties || []).filter(function (d) {
+        return SHOW_TODOS || !/TODO/i.test(String(d));
+      });
+      var stack = tVal(role.stack);
+      if (duties.length || stack) {
+        li.push('<ul class="process-timeline__duties">');
+        duties.forEach(function (d) { li.push('<li>' + escText(d) + '</li>'); });
+        if (stack) li.push('<li>Stack: ' + escText(stack) + '</li>');
+        li.push('</ul>');
+      }
+      li.push('</li>');
+      return li.join('');
+    });
+    h = h.concat(timeline('(Work)', escText(data.workTitle || 'Work history'), '', roleItems));
+
+    /* current work (experience page only — promotable to case pages later) */
+    var cw = data.currentWork || [];
+    if (cw.length) {
+      h.push('<section class="service-list">',
+        '<div class="section-head eyebrow" data-reveal="">',
+        '<h2 class="current-work__label">(Current work)</h2>',
+        '<span>' + pad2(cw.length) + ' items</span></div>',
+        '<div class="service-list__rows">');
+      cw.forEach(function (w, i) {
+        var desc = tReview(w.desc || '');
+        var titleHtml = w.href
+          ? '<h3 class="service-list__title"><a href="' + escText(w.href) + '"' +
+            transAttr(w.name, desc || 'Case study') + ' data-cursor="View">' +
+            escText(w.name) + '</a></h3>'
+          : '<h3 class="service-list__title">' + escText(w.name) + '</h3>';
+        var inner = '<div class="service-list__heading"><span class="service-list__number">' +
+          pad2(i + 1) + '</span>' + titleHtml + '</div>';
+        if (desc) inner += '<p class="service-list__description">' + escText(desc) + '</p>';
+        var links = w.links || [];
+        if (links.length) {
+          inner += '<ul class="service-list__tags chip-list">' + links.map(function (l) {
+            return '<li class="chip"><a href="' + escText(l.url) +
+              '" target="_blank" rel="noopener noreferrer">' + escText(l.label) + '</a></li>';
+          }).join('') + '</ul>';
+        }
+        var note = tVal(w.note || '');
+        if (note) inner += '<p class="current-work__note">' + escText(note) + '</p>';
+        h.push('<div class="service-list__row built__row--static" data-reveal="">' + inner + '</div>');
+      });
+      h.push('</div></section>');
+    }
+
+    host.innerHTML = h.join('');
+  })();
+
+  /* certificates ------------------------------------------------------ */
+
+  (function certificatesPage() {
+    var host = qs('[data-render="certificates"]');
+    var certs = DATA.certificates;
+    if (!host || !certs) return;
+    var count = qs('[data-cert-count]');
+    if (count) count.textContent = '(' + pad2(certs.length) + ')';
+
+    function media(c) {
+      if (c.image) {
+        return '<img class="img-fill" src="' + escText(c.image) + '" alt="' +
+          escText(c.title) + ' certificate" loading="lazy" decoding="async">';
+      }
+      var phText = SHOW_TODOS ? 'TODO: add certificate image' : '';
+      return '<div class="cert-card__ph"><span class="cert-card__ph-text">' +
+        phText + '</span></div>';
+    }
+
+    var h = ['<div class="section-head eyebrow" data-reveal="">',
+      '<h2 class="certs__label">(Course certificates)</h2></div>',
+      '<div class="certs__grid">'];
+    certs.forEach(function (c, i) {
+      var cid = tVal(c.credentialId);
+      h.push('<button type="button" class="project-card cert-card" data-reveal="" ' +
+        'data-cursor="View" data-cert="' + i + '">',
+        '<span class="project-card__media cert-card__media"><span class="project-card__layer">',
+        media(c), '</span></span>',
+        '<span class="project-card__meta"><span class="project-card__name">' +
+        escText(c.title) + '</span><span class="project-card__year">' +
+        tVal(c.date) + '</span></span>',
+        '<span class="project-card__type">' + escText(c.issuer) + '</span>',
+        cid ? '<span class="cert-card__id">ID: ' + escText(cid) + '</span>' : '',
+        '</button>');
+    });
+    h.push('</div>');
+    host.innerHTML = h.join('');
+
+    /* accessible dialog viewer */
+    var dlg = qs('[data-cert-dialog]');
+    if (!dlg) return;
+    var opener = null;
+    var hadNocursor = false;
+
+    function closeDlg() {
+      if (typeof dlg.close === 'function' && dlg.open) dlg.close();
+      else dlg.removeAttribute('open');
+    }
+
+    host.addEventListener('click', function (e) {
+      var btn = e.target && e.target.closest ? e.target.closest('[data-cert]') : null;
+      if (!btn || !host.contains(btn)) return;
+      var c = certs[+btn.getAttribute('data-cert')];
+      if (!c) return;
+      opener = btn;
+      qs('[data-cert-title]', dlg).textContent = c.title || '';
+      qs('[data-cert-issuer]', dlg).textContent = c.issuer || '';
+      /* empty/TODO fields hide their whole row while todos are hidden */
+      function setField(sel, value) {
+        var el = qs(sel, dlg);
+        if (!el) return;
+        el.textContent = value || '';
+        if (el.parentElement) el.parentElement.hidden = !value;
+      }
+      setField('[data-cert-date]', tVal(c.date));
+      setField('[data-cert-id]', tVal(c.credentialId));
+      var verify = qs('[data-cert-verify]', dlg);
+      var verifyRow = verify ? verify.parentElement : null;
+      if (c.verifyUrl) {
+        verify.innerHTML = '<a href="' + escText(c.verifyUrl) +
+          '" target="_blank" rel="noopener noreferrer">Verify credential ↗</a>';
+        if (verifyRow) verifyRow.hidden = false;
+      } else if (SHOW_TODOS) {
+        verify.textContent = 'Verify: TODO';
+        if (verifyRow) verifyRow.hidden = false;
+      } else {
+        verify.textContent = '';
+        if (verifyRow) verifyRow.hidden = true;
+      }
+      qs('[data-cert-media]', dlg).innerHTML = media(c);
+      if (typeof dlg.showModal === 'function') dlg.showModal();
+      else dlg.setAttribute('open', '');
+      /* the custom cursor lives below the top layer — hand the cursor
+         back to the OS while the dialog is open */
+      hadNocursor = doc.body.hasAttribute('data-nocursor');
+      doc.body.removeAttribute('data-nocursor');
+      var panel = qs('.cert-dialog__panel', dlg);
+      if (panel && canMotion) {
+        anim(panel, [{ opacity: 0, transform: 'translateY(18px)' },
+          { opacity: 1, transform: 'none' }],
+          { duration: 380, easing: EASE_OUT });
+      }
+      var closeBtn = qs('[data-cert-close]', dlg);
+      if (closeBtn) closeBtn.focus();
+    });
+
+    qsa('[data-cert-close]', dlg).forEach(function (el) {
+      el.addEventListener('click', closeDlg);
+    });
+    dlg.addEventListener('click', function (e) { if (e.target === dlg) closeDlg(); });
+    dlg.addEventListener('close', function () {
+      if (hadNocursor && FINE.matches && motionOn()) doc.body.setAttribute('data-nocursor', '');
+      hadNocursor = false;
+      if (opener) { opener.focus(); opener = null; }
+    });
+  })();
+
+  /* resume ------------------------------------------------------------ */
+
+  (function resumePage() {
+    var host = qs('[data-render="resume"]');
+    var data = DATA.resume;
+    if (!host || !data) return;
+    var pdf = data.pdf || {};
+    var h = [];
+
+    if (pdf.available && pdf.path) {
+      h.push('<div class="resume__actions">',
+        '<a class="resume__btn" href="' + escText(pdf.path) + '" download>Download PDF</a>',
+        '<a class="resume__btn resume__btn--ghost" href="' + escText(pdf.path) +
+        '" target="_blank" rel="noopener">Open in new tab</a></div>');
+      h.push('<div class="resume__preview">',
+        '<object class="resume__object" data="' + escText(pdf.path) + '" type="application/pdf">',
+        '<p class="resume__p">This browser can’t embed the PDF — ',
+        '<a class="resume__link" href="' + escText(pdf.path) + '" download>download it instead</a>.</p>',
+        '</object></div>');
+      h.push('<div class="resume__preview-card">',
+        '<p class="resume__preview-card-title">Ragul-Kumar-Resume.pdf</p>',
+        '<p class="resume__preview-card-note">The PDF isn’t embedded on small screens — use the buttons above.</p>',
+        '</div>');
+    } else {
+      h.push('<div class="resume__actions">',
+        '<button class="resume__btn" type="button" data-print>Save as PDF</button></div>');
+      h.push('<p class="resume__todo" data-todo>TODO: add resume PDF to assets/resume/</p>');
+    }
+
+    /* text summary built from data.js so it can’t drift */
+    h.push('<div class="resume__summary">',
+      '<div class="section-head eyebrow" data-reveal=""><h2>(Summary)</h2></div>',
+      '<div class="resume__grid">');
+
+    h.push('<div data-reveal=""><h3 class="resume__h">Role</h3>',
+      '<p class="resume__name">' + escText(data.name || 'Ragul Kumar') + '</p>',
+      '<p class="resume__p">' + escText(data.role) + '</p></div>');
+
+    h.push('<div data-reveal=""><h3 class="resume__h">Skills</h3><ul class="resume__list">');
+    (DATA.skills || []).forEach(function (g) {
+      h.push('<li><b>' + escText(g.name) + '</b> ' +
+        escText(g.items.map(skillName).join(', ')) + '</li>');
+    });
+    h.push('</ul></div>');
+
+    var exp = DATA.experience || {};
+    h.push('<div data-reveal=""><h3 class="resume__h">Experience</h3><ul class="resume__list">');
+    (exp.roles || []).forEach(function (r) {
+      var lab = tRange(r.label);
+      h.push('<li><b>' + escText(r.title) + '</b>' +
+        (r.org ? ' · ' + escText(r.org) : '') +
+        (lab ? ' · ' + escText(lab) : '') + '</li>');
+    });
+    h.push('</ul></div>');
+
+    h.push('<div data-reveal=""><h3 class="resume__h">Projects</h3><ul class="resume__list">');
+    (DATA.projects || []).forEach(function (pr) {
+      var d = tVal(pr.desc);
+      h.push('<li><b>' + escText(pr.name) + '</b>' + (d ? ' — ' + escText(d) : '') + '</li>');
+    });
+    h.push('</ul></div>');
+
+    h.push('<div data-reveal=""><h3 class="resume__h">Certificates</h3><ul class="resume__list">');
+    (DATA.certificates || []).forEach(function (c) {
+      h.push('<li><b>' + escText(c.title) + '</b> — ' + escText(c.issuer) + '</li>');
+    });
+    h.push('</ul></div>');
+
+    h.push('<div data-reveal=""><h3 class="resume__h">Education</h3><ul class="resume__list">');
+    (exp.education || []).forEach(function (e2) {
+      var li = '<li><b>' + escText(e2.title) + '</b>';
+      var d = tVal(e2.desc);
+      var l = tVal(e2.label);
+      if (d) li += ' — ' + escText(d);
+      if (l) li += ' (' + escText(l) + ')';
+      h.push(li + '</li>');
+    });
+    h.push('</ul></div>');
+
+    h.push('<div data-reveal=""><h3 class="resume__h">Contact</h3>',
+      '<p class="resume__p"><a class="resume__link" href="mailto:' + escText(data.email) +
+      '">' + escText(data.email) + '</a></p></div>');
+
+    h.push('</div></div>');
+    host.innerHTML = h.join('');
+
+    /* "Save as PDF" → browser print dialog (print styles in style.css) */
+    qsa('[data-print]', host).forEach(function (btn) {
+      btn.addEventListener('click', function () { window.print(); });
+    });
+  })();
+
+  /* github ------------------------------------------------------------ */
+
+  (function githubPage() {
+    var host = qs('[data-render="github"]');
+    var cfg = DATA.github;
+    if (!host || !cfg) return;
+
+    var KEY = 'rk-gh-v1';
+    var TTL = 600000; /* 10 minutes */
+
+    function cacheLoad() {
+      try {
+        var raw = sessionStorage.getItem(KEY);
+        if (!raw) return null;
+        var v = JSON.parse(raw);
+        if (!v || !v.t || !v.data || Date.now() - v.t > TTL) return null;
+        return v.data;
+      } catch (e) { return null; }
+    }
+    function cacheSave(data) {
+      try { sessionStorage.setItem(KEY, JSON.stringify({ t: Date.now(), data: data })); }
+      catch (e) { /* private mode — run without cache */ }
+    }
+    function status(text) { return '<p class="gh__status">' + escText(text) + '</p>'; }
+
+    function renderLoading() {
+      host.innerHTML = status('Loading GitHub data…');
+    }
+
+    function renderError() {
+      var h = ['<div class="gh__error" role="status">',
+        '<p>Couldn’t reach GitHub right now.</p>',
+        '<a href="' + escText(cfg.profileUrl) + '" target="_blank" rel="noopener noreferrer">' +
+        'View the profile on GitHub ↗</a></div>'];
+      if (SHOW_TODOS) {
+        /* static fallback list is only shown while todos are visible */
+        h.push('<div class="section-head eyebrow gh__head" data-reveal="">',
+          '<h2>(Repositories)</h2><span>Static fallback</span></div>',
+          '<ul class="gh__repos">');
+        (cfg.fallback || []).forEach(function (r) {
+          h.push('<li class="gh-repo">',
+            '<span class="gh-repo__name">' + escText(r.name) + '</span>',
+            '<p class="gh-repo__desc">' + escText(r.description) + '</p>',
+            '<div class="gh-repo__meta">',
+            '<span class="gh-repo__lang">' + escText(r.language) + '</span>',
+            '<span>Stars ' + escText(r.stars) + '</span>',
+            '<span>Updated ' + escText(r.updated) + '</span>',
+            '</div></li>');
+        });
+        h.push('</ul>');
+      }
+      host.innerHTML = h.join('');
+    }
+
+    function renderSuccess(d) {
+      var p = d.profile || {};
+      var repos = Array.isArray(d.repos) ? d.repos : [];
+      var top = repos.filter(function (r) { return !r.fork && !r.archived; })
+        .sort(function (a, b) {
+          var s = (b.stargazers_count || 0) - (a.stargazers_count || 0);
+          if (s) return s;
+          return Date.parse(b.pushed_at || 0) - Date.parse(a.pushed_at || 0);
+        })
+        .slice(0, 6);
+
+      var h = ['<div class="gh__profile">'];
+      if (p.avatar_url) {
+        h.push('<img class="gh__avatar" src="' + escText(p.avatar_url) + '" alt="' +
+          escText(p.name || p.login || 'GitHub') + ' avatar" width="112" height="112" ' +
+          'loading="lazy" decoding="async">');
+      }
+      h.push('<div class="gh__ident">',
+        '<p class="gh__name">' + escText(p.name || p.login || cfg.user) + '</p>',
+        '<p class="gh__handle">@' + escText(p.login || cfg.user) + '</p>',
+        '<a class="gh__profile-link" href="' + escText(cfg.profileUrl) +
+        '" target="_blank" rel="noopener noreferrer">View profile ↗</a></div>',
+        '<dl class="gh__stats">',
+        '<div><dt>Public repos</dt><dd>' +
+        (p.public_repos != null ? p.public_repos : '—') + '</dd></div>',
+        '<div><dt>Followers</dt><dd>' +
+        (p.followers != null ? p.followers : '—') + '</dd></div>',
+        '</dl></div>');
+
+      h.push('<div class="section-head eyebrow gh__head" data-reveal="">',
+        '<h2>(Repositories)</h2><span>Top ' + pad2(top.length) + ' by stars</span></div>');
+
+      if (top.length) {
+        h.push('<ul class="gh__repos">');
+        top.forEach(function (r) {
+          var updated = (r.updated_at || '').slice(0, 10);
+          h.push('<li class="gh-repo" data-reveal="">');
+          if (r.html_url) {
+            h.push('<a class="gh-repo__name" href="' + escText(r.html_url) +
+              '" target="_blank" rel="noopener noreferrer">' + escText(r.name) + '</a>');
+          } else {
+            h.push('<span class="gh-repo__name">' + escText(r.name) + '</span>');
+          }
+          h.push('<p class="gh-repo__desc">' + escText(r.description || '—') + '</p>',
+            '<div class="gh-repo__meta">',
+            '<span class="gh-repo__lang">' + escText(r.language || '—') + '</span>',
+            '<span>Stars ' + (r.stargazers_count || 0) + '</span>',
+            updated ? '<span>Updated ' + updated + '</span>' : '',
+            '</div></li>');
+        });
+        h.push('</ul>');
+      } else {
+        h.push(status('No public repositories to show.'));
+      }
+
+      /* language bar, computed from each displayed repo’s primary
+         language — labelled by repository count */
+      var counts = {};
+      var total = 0;
+      top.forEach(function (r) {
+        if (r.language) { counts[r.language] = (counts[r.language] || 0) + 1; total++; }
+      });
+      var langs = Object.keys(counts).sort(function (a, b) {
+        return counts[b] - counts[a] || a.localeCompare(b);
+      });
+      if (total && langs.length) {
+        h.push('<div class="lang-bar" role="img" aria-label="Languages by repository count">',
+          '<div class="lang-bar__track">');
+        langs.forEach(function (name, i) {
+          h.push('<span class="lang-bar__seg lang-bar__seg--' + ((i % 6) + 1) +
+            '" style="width:' + ((counts[name] / total) * 100).toFixed(2) + '%"></span>');
+        });
+        h.push('</div><ul class="lang-bar__legend">');
+        langs.forEach(function (name, i) {
+          h.push('<li><span class="lang-bar__swatch lang-bar__swatch--' +
+            ((i % 6) + 1) + '"></span>' + escText(name) + ' — ' + counts[name] + '</li>');
+        });
+        h.push('</ul><p class="lang-bar__note">by repository count</p></div>');
+      }
+
+      host.innerHTML = h.join('');
+    }
+
+    var cached = cacheLoad();
+    if (cached) { renderSuccess(cached); return; }
+
+    renderLoading();
+    if (typeof fetch !== 'function') { renderError(); return; }
+    function json(res) {
+      if (!res.ok) { var err = new Error('HTTP ' + res.status); err.status = res.status; throw err; }
+      return res.json();
+    }
+    Promise.all([fetch(cfg.apiUser).then(json), fetch(cfg.apiRepos).then(json)])
+      .then(function (r) {
+        var data = { profile: r[0], repos: r[1] };
+        cacheSave(data);
+        renderSuccess(data);
+      })
+      .catch(function () { renderError(); });
+  })();
+
+  /* home copy: hero line, statement scrub text, marquee (data.js) ------ */
+
+  (function homeCopy() {
+    var hero = qs('.hero__intro');
+    if (hero && DATA.site && DATA.site.heroLine) {
+      hero.textContent = DATA.site.heroLine;
+    }
+
+    var st = DATA.statement;
+    var p = qs('.statement__text');
+    if (p && st && st.text) {
+      var words = String(st.text).trim().split(/\s+/);
+      var italics = st.italic || [];
+      var accent = st.accent || '';
+      var h = ['<span class="sr-only">' + escText(st.text) + '</span>'];
+      words.forEach(function (w) {
+        var cls = 'statement__word';
+        var bare = w.replace(/[.,!?…:]+$/, '');
+        if (italics.indexOf(bare) > -1) cls += ' statement__word--italic';
+        if (accent && w === accent) cls += ' statement__word--accent';
+        h.push('<span class="' + cls + '" data-w="" aria-hidden="true">' + escText(w) + '</span>');
+      });
+      p.innerHTML = h.join('');
+    }
+
+    var mq = DATA.marquee;
+    if (mq && mq.length) {
+      var copy = mq.map(function (w) {
+        return '<span>' + escText(w) +
+          '</span><span class="marquee__diamond" aria-hidden="true"></span>';
+      }).join('');
+      qsa('.marquee__copy').forEach(function (c) { c.innerHTML = copy; });
+    }
+  })();
+
+  /* selected work: rows, dock, cursor card (data.js projects) ---------- */
+
+  (function selectedWorkPage() {
+    var host = qs('[data-render="selectedWork"]');
+    var projects = DATA.projects;
+    if (!host || !projects || !projects.length) return;
+    var n = projects.length;
+    var h = [];
+
+    h.push('<div class="selected-work__head eyebrow" data-reveal="">',
+      '<h2 class="selected-work__label">Selected work (' + pad2(n) + ')</h2>',
+      '<span class="selected-work__head-end">',
+      '<button type="button" class="selected-work__pause">(Pause motion)</button>',
+      SHOW_TODOS ? '<span class="selected-work__years">TODO: years</span>' : '',
+      '</span></div>');
+
+    h.push('<div class="selected-work__grid"><div class="selected-work__list">');
+    projects.forEach(function (pr, i) {
+      h.push('<a class="selected-work__row" data-reveal="" data-cursor="View"',
+        ' data-platform="' + escText(pr.platform || '') + '"',
+        ' href="work/' + pr.slug + '.html"' + transAttr(pr.name, pr.listType) + '>',
+        '<span class="selected-work__num" aria-hidden="true">' + pad2(i + 1) + '</span>',
+        '<div class="selected-work__name"><span class="selected-work__line">' +
+        escText(pr.name) + '</span></div>',
+        '<span class="selected-work__year">' + tVal(pr.year) + '</span>',
+        '<div class="selected-work__details"><span>' + escText(pr.type) + '</span>',
+        pr.platform ? '<span class="selected-work__tag">(' + escText(pr.platform) + ')</span>' : '',
+        '<span class="selected-work__cta" aria-hidden="true">View project →</span></div></a>');
+    });
+    h.push('<div class="selected-work__end"></div></div>');
+
+    var first = projects[0];
+    h.push('<div class="selected-work__col" aria-hidden="true">',
+      '<div class="selected-work__dock">',
+      '<div class="selected-work__frame" data-cursor="View">',
+      '<div class="selected-work__rest">' +
+      imgTag(first.altDesktop, first.slug + '-desktop', 'placeholder-4x5.svg') + '</div>',
+      '<span class="selected-work__big">01</span>',
+      '<div class="selected-work__stage">');
+    projects.forEach(function (pr) {
+      h.push('<div class="selected-work__stage-layer">',
+        '<div class="selected-work__strip" style="--slides:2">',
+        '<div class="selected-work__slide">' +
+        imgTag(pr.altDesktop, pr.slug + '-desktop', 'placeholder-4x5.svg') + '</div>',
+        '<div class="selected-work__slide">' +
+        imgTag(pr.altMobile, pr.slug + '-mobile', 'placeholder-tall.svg') + '</div>',
+        '</div></div>');
+    });
+    h.push('</div>',
+      '<div class="selected-work__dots"><span class="selected-work__dot"></span>',
+      '<span class="selected-work__dot"></span></div>',
+      '</div>',
+      '<div class="selected-work__meta"><span>(<span class="selected-work__cur">01</span> / ' +
+      pad2(n) + ')</span><span class="selected-work__plat">' +
+      escText(first.platform || '') + '</span></div>',
+      '<div class="selected-work__track"><div class="selected-work__bar"></div></div>',
+      '</div></div>');
+
+    h.push('<div class="selected-work__card" aria-hidden="true">');
+    projects.forEach(function (pr) {
+      h.push('<div class="selected-work__layer"><div class="selected-work__cover">' +
+        imgTag(pr.altDesktop, pr.slug + '-desktop', 'placeholder-4x5.svg') + '</div></div>');
+    });
+    h.push('</div>');
+
+    host.innerHTML = h.join('');
+  })();
+
+  /* up close: 12 frames = first six projects, desktop + mobile ---------- */
+
+  (function upClosePage() {
+    var host = qs('[data-render="upClose"]');
+    var projects = (DATA.projects || []).slice(0, 6);
+    if (!host || !projects.length) return;
+    var h = ['<div class="up-close__head eyebrow" data-reveal="">',
+      '<h2 class="up-close__label">(Up close)</h2><span>Drag or scroll</span></div>',
+      '<div class="up-close__wrap"><div class="up-close__track">'];
+    var idx = 0;
+    projects.forEach(function (pr) {
+      [['Desktop', pr.altDesktop, pr.slug + '-desktop', 'placeholder-4x5.svg'],
+       ['Mobile', pr.altMobile, pr.slug + '-mobile', 'placeholder-tall.svg']
+      ].forEach(function (d) {
+        idx += 1;
+        h.push('<a class="up-close__item" draggable="false" data-cursor="Look" href="work/' +
+          pr.slug + '.html"' + transAttr(pr.name, pr.listType) + '>',
+          '<div class="up-close__frame"><div class="up-close__media">' +
+          imgTag(d[1], d[2], d[3]) + '</div></div>',
+          '<div class="up-close__caption eyebrow"><span>(' + pad2(idx) + ') ' +
+          escText(pr.name) + '</span><span>' + d[0] + '</span></div></a>');
+      });
+    });
+    h.push('</div></div>');
+    host.innerHTML = h.join('');
+  })();
+
+  /* work index: list + grid + hover-reveal portal (data.js projects) ---- */
+
+  function projectCardHtml(pr, prefix) {
+    return '<a class="project-card" data-reveal="" data-cursor="View" href="' +
+      (prefix || '') + 'work/' + pr.slug + '.html"' + transAttr(pr.name, pr.listType) + '>' +
+      '<div class="project-card__media"><div class="project-card__layer">' +
+      imgTag(pr.altDesktop, pr.slug + '-desktop', 'placeholder-4x5.svg') + '</div></div>' +
+      '<div class="project-card__meta"><span class="project-card__name">' +
+      escText(pr.name) + '</span><span class="project-card__year">' +
+      tVal(pr.year) + '</span></div>' +
+      '<p class="project-card__type">' +
+      escText(pr.listType + (pr.platform ? ' · ' + pr.platform : '')) + '</p></a>';
+  }
+
+  (function workIndexPage() {
+    var host = qs('[data-render="workIndex"]');
+    var projects = DATA.projects;
+    if (!host || !projects || !projects.length) return;
+    var n = projects.length;
+    var h = [];
+
+    h.push('<div class="work-index__head">',
+      '<h1 class="work-index__title"><span class="sr-only">Work </span>',
+      '<span aria-hidden="true" style="display:contents">' + kineticLetters('Work', 340) + '</span>',
+      '<sup class="work-index__count" data-in="">(' + pad2(n) + ')</sup></h1>',
+      '<div class="work-index__toggle" role="group" aria-label="View">',
+      '<button class="work-index__view work-index__view--active" type="button" ' +
+      'aria-pressed="true">List</button>',
+      '<button class="work-index__view" type="button" aria-pressed="false">Grid</button>',
+      '</div></div>');
+
+    h.push('<div class="work-index__list">',
+      '<div class="work-index__cols"><span>#</span><span>Project</span>',
+      '<span>Type</span><span>Role</span><span>Year</span></div>');
+    projects.forEach(function (pr, i) {
+      h.push('<a class="work-index__row" data-index="' + i + '" data-reveal="" data-cursor="View"' +
+        ' data-platform="' + escText(pr.platform || '') + '" href="work/' + pr.slug + '.html"' +
+        transAttr(pr.name, pr.listType) + '>',
+        '<span class="work-index__num" aria-hidden="true">' + pad2(i + 1) + '</span>',
+        '<h2 class="work-index__name">' + escText(pr.name) + '</h2>',
+        '<span class="work-index__detail">' + escText(pr.listType) + '</span>',
+        '<span class="work-index__detail">' + tVal(pr.role) + '</span>',
+        '<span class="work-index__detail work-index__year">' + tVal(pr.year) + '</span></a>');
+    });
+    h.push('<div class="work-index__end"></div></div>');
+
+    h.push('<div class="work-index__grid" hidden="">');
+    projects.forEach(function (pr) { h.push(projectCardHtml(pr, '')); });
+    h.push('</div>');
+
+    host.innerHTML = h.join('');
+  })();
+
+  (function projectRevealPage() {
+    var host = qs('[data-render="projectReveal"]');
+    if (!host) return;
+    host.innerHTML = (DATA.projects || []).map(function (pr) {
+      return '<div class="project-reveal__layer">' +
+        imgTag(pr.altDesktop, pr.slug + '-desktop', 'placeholder-4x5.svg') + '</div>';
+    }).join('');
+  })();
+
+  /* about page copy (data.js) ------------------------------------------ */
+
+  (function aboutPage() {
+    var a = DATA.about;
+    if (!a) return;
+    var lead = qs('[data-about="lead"]');
+    if (lead) lead.textContent = tReview(a.lead || '');
+    var text = qs('[data-about="text"]');
+    if (text && a.paras) {
+      text.innerHTML = a.paras.map(function (p) {
+        return '<p data-reveal="">' + escText(tReview(p)) + '</p>';
+      }).join('');
+    }
+    var tool = qs('[data-about="toolkit"]');
+    if (tool && a.toolkit) {
+      tool.innerHTML = a.toolkit.map(function (s) {
+        return '<span class="list__item">' + escText(s) + '</span>';
+      }).join('');
+    }
+    var cl = qs('[data-about="callout-lead"]');
+    if (cl) cl.textContent = a.calloutLead || '';
+    var ct = qs('[data-about="callout-text"]');
+    if (ct && a.calloutText) {
+      ct.innerHTML = a.calloutText.map(function (p) {
+        return '<p>' + escText(p) + '</p>';
+      }).join('');
+    }
+  })();
+
+  /* static "TODO" text is blanked while showTodos is false (suffixes
+     stripped first); [data-todo] blocks are hidden by CSS ------------- */
+  if (!SHOW_TODOS && doc.createTreeWalker) {
+    var tw = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, null);
+    var todoNodes = [];
+    while (tw.nextNode()) {
+      var tn = tw.currentNode;
+      if (tn.nodeValue && tn.nodeValue.indexOf('TODO') !== -1 &&
+          tn.parentElement &&
+          !tn.parentElement.closest('script, style, textarea, [data-todo]')) {
+        todoNodes.push(tn);
+      }
+    }
+    todoNodes.forEach(function (tn) {
+      var v = tn.nodeValue.replace(/\s*TODO: review/g, '');
+      if (/^\s*TODO\b/.test(v)) v = '';
+      tn.nodeValue = v;
+    });
+  }
+
   /* --------------------------------------------- image slot hydration */
+  /* runs AFTER the page-content renderers so slots inside rendered
+     markup (home rows/dock/up-close, work index, reveal layers) exist */
 
   (function hydrateImages() {
     var data = window.PORTFOLIO;
@@ -338,6 +1113,34 @@
       ring.style.borderColor = cursorLabel ? 'var(--color-accent)' : '';
     }, { passive: true });
   }
+
+  /* ------------------------------------------------------------ hero fit */
+
+  var fitLines = qsa('.hero__line');
+  function fitHeroLines() {
+    fitLines.forEach(function (line) {
+      line.style.removeProperty('--fit-size');
+      /* letters render their glyphs through ::before; hold the kinetic
+         fvs at rest while measuring so a wobbling cursor can't skew it */
+      var ls = qsa('.kinetic__letter', line);
+      var saved = ls.map(function (l) { return l.style.fontVariationSettings; });
+      ls.forEach(function (l) { l.style.fontVariationSettings = ''; });
+      var avail = line.clientWidth;
+      /* scrollWidth never reports less than clientWidth, so measure the
+         natural text width with a transient max-content width instead */
+      line.style.width = 'max-content';
+      var natural = line.getBoundingClientRect().width;
+      line.style.width = '';
+      ls.forEach(function (l, i) { l.style.fontVariationSettings = saved[i] || ''; });
+      if (natural > 0 && avail > 0) {
+        var size = parseFloat(getComputedStyle(line).fontSize);
+        if (size > 0) {
+          line.style.setProperty('--fit-size', (size * avail / natural).toFixed(2) + 'px');
+        }
+      }
+    });
+  }
+  fitHeroLines();
 
   /* --------------------------------------------------- statement scrub */
 
@@ -942,37 +1745,42 @@
 
   /* -------------------------------------------------- process timeline */
 
-  var ptLine = qs('.process-timeline__line');
+  var ptLines = [];
   (function processTimeline() {
-    var list = qs('.process-timeline__list');
-    if (!list) return;
-    var steps = qsa('.process-timeline__step', list);
+    var timelines = qsa('.process-timeline');
+    if (!timelines.length) return;
 
-    /* steps light up as they enter the viewport */
+    /* steps light up as they enter the viewport (one observer for all) */
+    var io = null;
     if ('IntersectionObserver' in window) {
-      var io = new IntersectionObserver(function (entries) {
+      io = new IntersectionObserver(function (entries) {
         entries.forEach(function (en) {
           if (en.isIntersecting) { en.target.setAttribute('data-on', ''); io.unobserve(en.target); }
         });
       }, { rootMargin: '0px 0px -30% 0px' });
-      steps.forEach(function (s) { io.observe(s); });
-    } else {
-      steps.forEach(function (s) { s.setAttribute('data-on', ''); });
     }
 
-    /* the spine fills with scroll */
-    if (!ptLine) return;
-    var wrap = ptLine.parentElement;
-    var box = null;
-    addMeasure(function () {
-      var r = wrap.getBoundingClientRect();
-      box = { top: r.top + window.scrollY, h: r.height };
-    });
-    addFrame(function () {
-      if (!box || !motionOn()) return;
-      var sy = window.scrollY, vh = innerHeight;
-      var p = clamp((sy + vh * .6 - box.top) / Math.max(1, box.h), 0, 1);
-      ptLine.style.transform = 'scaleY(' + p.toFixed(4) + ')';
+    timelines.forEach(function (tl) {
+      var steps = qsa('.process-timeline__step', tl);
+      if (io) steps.forEach(function (s) { io.observe(s); });
+      else steps.forEach(function (s) { s.setAttribute('data-on', ''); });
+
+      /* each spine fills with scroll */
+      var line = qs('.process-timeline__line', tl);
+      if (!line) return;
+      ptLines.push(line);
+      var wrap = line.parentElement;
+      var box = null;
+      addMeasure(function () {
+        var r = wrap.getBoundingClientRect();
+        box = { top: r.top + window.scrollY, h: r.height };
+      });
+      addFrame(function () {
+        if (!box || !motionOn()) return;
+        var sy = window.scrollY, vh = innerHeight;
+        var p = clamp((sy + vh * .6 - box.top) / Math.max(1, box.h), 0, 1);
+        line.style.transform = 'scaleY(' + p.toFixed(4) + ')';
+      });
     });
   })();
 
@@ -1094,7 +1902,7 @@
       qsa('.selected-work__bar', dockSection || doc).forEach(function (b) { b.style.transform = ''; });
       var track = qs('.up-close__track');
       if (track) track.style.transform = '';
-      if (ptLine) ptLine.style.transform = '';
+      ptLines.forEach(function (l) { l.style.transform = ''; });
       var card = qs('.selected-work__card');
       if (card) { card.style.opacity = ''; card.style.transform = ''; }
     }
@@ -1139,14 +1947,14 @@
     }
     /* late re-measures once fonts and images have settled */
     if (doc.fonts && doc.fonts.ready && doc.fonts.ready.then) {
-      doc.fonts.ready.then(function () { measureAll(); remeasureSoon(); });
+      doc.fonts.ready.then(function () { fitHeroLines(); measureAll(); remeasureSoon(); });
     }
     window.addEventListener('load', function () { measureAll(); remeasureSoon(); });
-    setTimeout(function () { measureAll(); }, 1500);
+    setTimeout(function () { fitHeroLines(); measureAll(); }, 1500);
     var resizeTimer = 0;
     window.addEventListener('resize', function () {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(function () { measureAll(); remeasureSoon(); }, 200);
+      resizeTimer = setTimeout(function () { fitHeroLines(); measureAll(); remeasureSoon(); }, 200);
     }, { passive: true });
   }
 
