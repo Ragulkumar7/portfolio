@@ -5736,93 +5736,111 @@ html:not([data-todos-on]) [data-todo] {
 
 /* marker: guide-avatar START */
 /* ==========================================================================
-   Guide avatar (js/avatar.js)
-   Fixed bottom-right companion: 160px on desktop, 96px at ≤700px
-   (96px at 390px). z-index 90 — above page content, below the menu
-   overlay (95), the page transition (9000), the cursor (9790+) and the
-   certificate dialog (native top layer). The container itself never
-   takes the pointer; only the toggle, the bubble and the avatar do.
+   Guide avatar (js/avatar.js) — dithered SVG companion
+
+   #guide is a fixed flex ROW: the paper bubble sits BESIDE the avatar
+   (inner side), so the cluster stays about as tall as the avatar and
+   can always tuck into a clear band above page controls. z-index 90 —
+   above page content, below the menu overlay (95), the header (100),
+   the page transition (9000), the cursor (9790+) and the certificate
+   dialog (native top layer). The container never takes the pointer;
+   only the zones, the bubble and the controls do.
+
+   All motion is transform/opacity, stepped ~12fps for a sprite feel.
    ========================================================================== */
 
 .guide {
-  --guide-size: 160px;
-  --guide-base-bottom: 20px;
+  /* the script sets --guide-size-base per anchor; the effective size is
+     capped on small screens so a 300px hero avatar never crowds 390px */
+  --guide-size-base: 160px;
+  --guide-size: var(--guide-size-base);
   position: fixed;
-  right: clamp(14px, 2vw, 26px);
-  bottom: var(--guide-base-bottom);
+  bottom: 24px;
   z-index: 90;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: flex-end;
-  gap: 10px;
-  max-width: calc(100vw - 24px);
+  gap: 12px;
+  max-width: calc(100vw - 20px);
   pointer-events: none;
-  perspective: 800px;
 }
 
-/* hidden while the menu overlay or the certificate dialog is open,
-   or when there is no room left above the footer */
+/* side is set inline by the script; row-reverse puts the avatar on the
+   left edge and the bubble on its inner (right) side */
+.guide[data-side="left"] {
+  flex-direction: row-reverse;
+}
+
+/* hidden while the menu / dialog / transition is open, the intro runs,
+   or no clear spot exists for this anchor */
 .guide[data-suppressed] {
   visibility: hidden;
 }
 
-/* "Guide: off" keeps the toggle, drops the avatar and the bubble */
-.guide--off .guide__stage,
-.guide--off .guide__bubble {
+/* "Guide: off" removes the avatar + bubble entirely (the footer button
+   and the close button share this one persisted state) */
+.guide--off {
   display: none !important;
 }
 
-.guide[data-noimg] .guide__stage {
-  display: none;
-}
+/* ------------------------------------------------------------- close btn */
 
-/* ------------------------------------------------------------- on/off pill */
-
-.guide__toggle {
+.guide__close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
   box-sizing: border-box;
-  pointer-events: auto;
-  min-height: 30px;
-  min-width: 84px;
-  padding: 7px 12px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
   border: 1px solid var(--color-outline);
-  border-radius: var(--radius-pill);
+  border-radius: 50%;
   background: var(--color-surface);
   color: var(--color-label);
   font-family: var(--font-mono);
-  letter-spacing: .08em;
-  text-transform: uppercase;
+  line-height: 1;
+  font-size: 16px;
   cursor: pointer;
-  font-size: 10px;
-  transition: color .3s, border-color .3s;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s var(--ease-out), color .2s, border-color .2s;
 }
 
-.guide__toggle:hover,
-.guide__toggle:focus-visible {
+.guide[data-side="left"] .guide__close {
+  right: auto;
+  left: 4px;
+}
+
+.guide:hover .guide__close,
+.guide__close:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.guide__close:hover,
+.guide__close:focus-visible {
   border-color: var(--color-accent);
   color: var(--color-text);
+  outline: none;
 }
 
-.guide__toggle[aria-pressed="false"] {
-  opacity: .65;
-}
-
-/* -------------------------------------------------------- speech bubble */
+/* --------------------------------------------------------- speech bubble */
 
 .guide__bubble {
   position: relative;
   box-sizing: border-box;
   pointer-events: auto;
-  max-width: min(260px, calc(100vw - 44px));
+  max-width: min(260px, calc(100vw - var(--guide-size) - 48px));
   padding: 11px 14px;
   border-radius: 10px;
-  background: var(--color-text);
-  color: var(--color-bg);
+  background: #edeae4;                 /* paper */
+  color: #111010;                      /* ink */
   font-family: var(--font-sans);
+  font-size: 13.5px;
+  line-height: 1.45;
   opacity: 0;
   transform: translateY(6px);
   transition: opacity .3s var(--ease-out), transform .3s var(--ease-out);
-  font-size: 13.5px;
-  line-height: 1.45;
 }
 
 .guide__bubble[data-open] {
@@ -5830,7 +5848,7 @@ html:not([data-todos-on]) [data-todo] {
   transform: none;
 }
 
-/* the invisible full line reserves the height while the typewriter runs */
+/* the invisible full line reserves the final height while typing */
 .guide__bubble-sizer {
   display: block;
   visibility: hidden;
@@ -5843,42 +5861,42 @@ html:not([data-todos-on]) [data-todo] {
   right: 14px;
 }
 
-/* dithered edge: a dense checkerboard band, then a sparse dot band */
-.guide__bubble::before {
-  content: "";
-  position: absolute;
-  inset: -4px;
-  z-index: -1;
-  border-radius: 12px;
-  background: var(--color-text);
-  -webkit-mask-image: repeating-conic-gradient(#000 0 25%, #0000 0 50%);
-  mask-image: repeating-conic-gradient(#000 0 25%, #0000 0 50%);
-  -webkit-mask-size: 6px 6px;
-  mask-size: 6px 6px;
-  pointer-events: none;
+/* the accent word ("Ragul") reads darker on paper for contrast */
+.guide__accent {
+  color: #2f58c8;
 }
 
+/* dithered offset shadow — a dot pattern, no real shadow */
 .guide__bubble::after {
   content: "";
   position: absolute;
-  inset: -9px;
+  inset: 5px -5px -5px 5px;
   z-index: -1;
-  border-radius: 16px;
-  background-image: radial-gradient(circle at center, var(--color-text) 1.2px, #0000 1.5px);
-  background-size: 7px 7px;
+  border-radius: 10px;
+  background-image: radial-gradient(circle at 1.4px 1.4px, #edeae459 1.4px, #0000 1.6px);
+  background-size: 5px 5px;
   pointer-events: none;
 }
 
-/* pixel staircase tail — the lower steps tuck behind the avatar */
+/* tail pointing at the avatar (inner side) */
 .guide__tail {
   position: absolute;
-  right: 28px;
-  bottom: -8px;
-  width: 8px;
-  height: 8px;
-  background: var(--color-text);
-  box-shadow: 8px 8px 0 var(--color-text), 16px 16px 0 var(--color-text);
+  bottom: 16px;
+  width: 0;
+  height: 0;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
   pointer-events: none;
+}
+
+.guide[data-side="right"] .guide__tail {
+  right: -9px;
+  border-left: 10px solid #edeae4;
+}
+
+.guide[data-side="left"] .guide__tail {
+  left: -9px;
+  border-right: 10px solid #edeae4;
 }
 
 /* --------------------------------------------------------------- avatar */
@@ -5888,64 +5906,261 @@ html:not([data-todos-on]) [data-todo] {
   box-sizing: border-box;
   pointer-events: auto;
   width: var(--guide-size);
-  height: calc(var(--guide-size) * 5 / 4);
-  cursor: grab;
-  touch-action: none;
-  -webkit-user-select: none;
+  height: calc(var(--guide-size) * 1.1);        /* viewBox 200 x 220 */
+  flex: none;
   user-select: none;
-  will-change: transform;
+  -webkit-user-select: none;
 }
 
-body:not([data-nocursor]) .guide__stage:active {
-  cursor: grabbing;
+.guide__lean,
+.guide__flip {
+  width: 100%;
+  height: 100%;
 }
 
-.guide__img {
+.guide__lean {
+  transform-origin: 50% 100%;
+}
+
+.guide__flip {
+  transform-origin: 50% 50%;
+  transition: transform var(--flip-ms, 500ms) var(--ease-out);
+}
+
+.guide[data-side="left"] .guide__flip {
+  transform: scaleX(-1);
+}
+
+.guide__stage svg {
   display: block;
   width: 100%;
   height: 100%;
-  image-rendering: pixelated;
-  filter: drop-shadow(0 12px 22px rgba(0, 0, 0, .5));
+  overflow: visible;
+}
+
+/* SVG pieces we transform — pivot the head around the chin */
+#av-head {
+  transform-box: view-box;
+  transform-origin: 100px 150px;
+}
+
+#av-body {
+  transform-box: view-box;
+  transform-origin: 100px 220px;
+}
+
+#av-brows {
+  transform-box: view-box;
+  transform-origin: 100px 90px;
+}
+
+/* --------------------------------------------------- states (data-state) */
+
+/* mouth variants: one visible at a time (CSS beats the SVG attributes) */
+#av-mouth .m {
+  opacity: 0;
+}
+
+#av-mouth .m-smile {
+  opacity: 1;
+}
+
+/* eyes + blush defaults */
+#av-eyes-open { opacity: 1; }
+#av-eyes-closed { opacity: 0; }
+#av-blush { opacity: 0; }
+#av-puff { opacity: 0; }
+
+/* random blink */
+.guide[data-blink] #av-eyes-open { opacity: 0; }
+.guide[data-blink] #av-eyes-closed { opacity: 1; }
+
+/* --- nose: cough ------------------------------------------------------- */
+.guide[data-state="cough"] #av-eyes-open { opacity: 0; }
+.guide[data-state="cough"] #av-eyes-closed { opacity: 1; }
+.guide[data-state="cough"] #av-mouth .m-smile { opacity: 0; }
+.guide[data-state="cough"] #av-mouth .m-open { opacity: 1; }
+.guide[data-state="cough"] #av-puff { opacity: 1; }
+.guide[data-state="cough"] #av-head { animation: av-cough 700ms steps(8, end) both; }
+.guide[data-state="cough"] #av-puff { animation: av-puff 700ms steps(6, end) both; }
+
+/* --- nose: sneeze (3 pokes in the window) ------------------------------ */
+.guide[data-state="sneeze"] #av-eyes-open { opacity: 0; }
+.guide[data-state="sneeze"] #av-eyes-closed { opacity: 1; }
+.guide[data-state="sneeze"] #av-mouth .m-smile { opacity: 0; }
+.guide[data-state="sneeze"] #av-mouth .m-open { opacity: 1; }
+.guide[data-state="sneeze"] #av-puff { opacity: 1; }
+.guide[data-state="sneeze"] #av-head { animation: av-sneeze 850ms steps(10, end) both; }
+.guide[data-state="sneeze"] #av-puff { animation: av-puff-big 850ms steps(7, end) both; }
+
+/* --- body: giggle (loops while tickled) -------------------------------- */
+.guide[data-state="giggle"] #av-eyes-open { opacity: 0; }
+.guide[data-state="giggle"] #av-eyes-closed { opacity: 1; }
+.guide[data-state="giggle"] #av-mouth .m-smile { opacity: 0; }
+.guide[data-state="giggle"] #av-mouth .m-grin { opacity: 1; }
+.guide[data-state="giggle"] #av-blush { opacity: 1; }
+.guide[data-state="giggle"] #av-body { animation: av-giggle 300ms steps(4, end) infinite; }
+
+/* --- hair/head: pat ---------------------------------------------------- */
+.guide[data-state="pat"] #av-eyes-open { opacity: 0; }
+.guide[data-state="pat"] #av-eyes-closed { opacity: 1; }
+.guide[data-state="pat"] #av-blush { opacity: 1; }
+.guide[data-state="pat"] #av-head { animation: av-pat 650ms steps(7, end) both; }
+
+/* --- eyes: flinch ------------------------------------------------------ */
+.guide[data-state="flinch"] #av-eyes-open { opacity: 0; }
+.guide[data-state="flinch"] #av-eyes-closed { opacity: 1; }
+.guide[data-state="flinch"] #av-brows { animation: av-brows-up 400ms steps(5, end) both; }
+.guide[data-state="flinch"] #av-head { animation: av-flinch 400ms steps(5, end) both; }
+
+/* ---------------------------------------------------- keyframes (~12fps) */
+
+@keyframes av-cough {
+  0%   { transform: translateY(0); }
+  12%  { transform: translateY(7px); }
+  25%  { transform: translateY(0); }
+  45%  { transform: translateY(7px); }
+  60%  { transform: translateY(0); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes av-sneeze {
+  0%   { transform: translateY(0) rotate(0deg); }
+  29%  { transform: translateY(-6px) rotate(-10deg); }
+  45%  { transform: translateY(12px) rotate(8deg); }
+  70%  { transform: translateY(0) rotate(0deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+
+@keyframes av-pat {
+  0%   { transform: translateY(0) scaleY(1); }
+  25%  { transform: translateY(4px) scaleY(.965); }
+  55%  { transform: translateY(0) scaleY(1); }
+  100% { transform: translateY(0) scaleY(1); }
+}
+
+@keyframes av-flinch {
+  0%   { transform: translateY(0); }
+  35%  { transform: translateY(-5px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes av-brows-up {
+  0%   { transform: translateY(0); }
+  40%  { transform: translateY(-5px); }
+  100% { transform: translateY(-5px); }
+}
+
+@keyframes av-giggle {
+  0%   { transform: translateX(0); }
+  25%  { transform: translateX(-3px); }
+  50%  { transform: translateX(3px); }
+  75%  { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes av-puff {
+  0%   { opacity: 0; transform: translate(0, 0) scale(.6); }
+  30%  { opacity: 1; transform: translate(4px, -4px) scale(1); }
+  100% { opacity: 0; transform: translate(10px, -10px) scale(1.2); }
+}
+
+@keyframes av-puff-big {
+  0%   { opacity: 0; transform: translate(0, 0) scale(.6); }
+  25%  { opacity: 1; transform: translate(6px, -6px) scale(1.4); }
+  100% { opacity: 0; transform: translate(16px, -16px) scale(1.8); }
+}
+
+/* travel: three hop bounces, then a squash on landing */
+@keyframes av-hop {
+  0%   { transform: translateY(0) scaleY(1); }
+  10%  { transform: translateY(-16px) scaleY(1.04); }
+  20%  { transform: translateY(0) scaleY(.98); }
+  32%  { transform: translateY(-16px) scaleY(1.04); }
+  42%  { transform: translateY(0) scaleY(.98); }
+  54%  { transform: translateY(-16px) scaleY(1.03); }
+  64%  { transform: translateY(0) scaleY(1); }
+  86%  { transform: translateY(0) scaleY(1); }
+  92%  { transform: translateY(0) scaleY(.9); }
+  100% { transform: translateY(0) scaleY(1); }
+}
+
+.guide__stage[data-anim="hop"] {
+  animation: av-hop var(--travel-ms, 900ms) steps(11, end) both;
+}
+
+/* ------------------------------------------------------- footer on/off */
+
+.footer__guide {
+  font-family: var(--font-mono);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--color-label);
+  background: 0 0;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.footer__guide:hover,
+.footer__guide:focus-visible {
+  color: var(--color-accent);
+  outline: none;
+}
+
+.footer__guide[aria-pressed="false"] {
+  opacity: .6;
 }
 
 /* ------------------------------------------------------- small screens */
 
-@media (max-width:700px) {
+@media (max-width: 700px) {
   .guide {
-    --guide-size: 96px;
-    --guide-base-bottom: 14px;
-    right: 14px;
+    --guide-size: min(var(--guide-size-base), 110px);
+    bottom: 14px;
     gap: 8px;
   }
   .guide__bubble {
-    max-width: min(180px, calc(100vw - 40px));
+    max-width: calc(100vw - var(--guide-size) - 44px);
     padding: 10px 12px;
     font-size: 13px;
   }
-  .guide__bubble-text {
-    top: 10px;
-    left: 12px;
-    right: 12px;
-  }
-  .guide__toggle {
-    min-height: 34px;
-  }
+  .guide__bubble-text { top: 10px; left: 12px; right: 12px; }
+  .guide__close { width: 34px; height: 34px; }
 }
 
-/* ------------------------------------------- static avatar / no motion */
+/* --------------------------------------------- static avatar / no motion */
 
-@media (prefers-reduced-motion:reduce) {
+@media (prefers-reduced-motion: reduce) {
+  .guide,
   .guide__bubble,
-  .guide__stage,
-  .guide__toggle {
+  .guide__flip,
+  .guide__close,
+  .footer__guide {
     transition: none;
   }
+  .guide__stage[data-anim="hop"],
+  #av-head,
+  #av-body,
+  #av-brows,
+  #av-puff {
+    animation: none !important;
+  }
 }
 
+html[data-motion="off"] .guide,
 html[data-motion="off"] .guide__bubble,
-html[data-motion="off"] .guide__stage,
-html[data-motion="off"] .guide__toggle {
+html[data-motion="off"] .guide__flip {
   transition: none;
+}
+
+html[data-motion="off"] .guide__stage[data-anim="hop"],
+html[data-motion="off"] #av-head,
+html[data-motion="off"] #av-body,
+html[data-motion="off"] #av-brows,
+html[data-motion="off"] #av-puff {
+  animation: none !important;
 }
 
 @media print {

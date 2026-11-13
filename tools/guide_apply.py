@@ -34,6 +34,14 @@ CSS_FILE = os.path.join(ROOT, 'tools', 'guide_avatar.css')
 CSS_START = 'marker: guide-avatar START'
 CSS_END = 'marker: guide-avatar END'
 
+# footer toggle: planted once before the Back-to-top button, then only
+# rewritten between the markers on every later run
+FSTART = '<!-- guide:footer:start -->'
+FEND = '<!-- guide:footer:end -->'
+FANCHOR = re.compile(r'[ \t]*<button[^>]*data-back-to-top[^>]*>')
+FBLOCK = ('<button type="button" class="footer__guide" data-guide-toggle="" '
+          'aria-pressed="true" data-cursor="Guide">Guide: on</button>')
+
 
 def io_open(path, mode='r'):
     return io.open(path, mode, encoding='utf-8', newline='')
@@ -63,6 +71,31 @@ def transform_page(text, prefix, rel):
     if not m:
         raise SystemExit('%s: js/main.js anchor not found' % rel)
     new = text[:m.end()] + build_block(prefix, eol) + eol + text[m.end():]
+    return new, 'marked'
+
+
+def transform_footer(text, rel):
+    """Plant/refresh the footer Guide toggle between marker guards."""
+    eol = '\r\n' if '\r\n' in text else '\n'
+    has_s, has_e = FSTART in text, FEND in text
+    if has_s or has_e:
+        if not (has_s and has_e):
+            raise SystemExit('%s: footer marker mismatch' % rel)
+        i = text.index(FSTART)
+        j = text.index(FEND) + len(FEND)
+        if i > j:
+            raise SystemExit('%s: footer markers out of order' % rel)
+        block = FSTART + eol + FBLOCK + eol + FEND
+        # keep the block inline (no line breaks) for a compact footer row
+        block = FSTART + FBLOCK + FEND
+        new = text[:i] + block + text[j:]
+        return new, ('ok' if new == text else 'refreshed')
+    m = FANCHOR.search(text)
+    if not m:
+        raise SystemExit('%s: footer back-to-top anchor not found' % rel)
+    block = FSTART + FBLOCK + FEND
+    # plant immediately before the Back-to-top button
+    new = text[:m.start()] + block + eol + text[m.start():]
     return new, 'marked'
 
 
@@ -120,10 +153,14 @@ def main():
             new, status = transform_page(text, prefix, rel)
             if status != 'ok':
                 changed += 1
-                if not check:
-                    with io_open(path, 'w') as fh:
-                        fh.write(new)
-            print('  %-8s %s' % (status.upper() if check else status, rel))
+            new2, status2 = transform_footer(new, rel)
+            if status2 != 'ok':
+                changed += 1
+            if not check and (status != 'ok' or status2 != 'ok'):
+                with io_open(path, 'w') as fh:
+                    fh.write(new2)
+            shown = status if status != 'ok' else status2
+            print('  %-8s %s' % (shown.upper() if check else shown, rel))
 
     print('%s %d file(s)' % ('would change' if check else 'changed', changed))
 

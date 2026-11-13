@@ -57,31 +57,126 @@
       heroLine: 'I build CRMs, billing software and Shopify stores that businesses run on.'
     },
 
-    /* guide avatar (js/avatar.js) — every bubble line lives here, the
-       script holds no copy of its own. lines.* are keyed by trigger
-       (hero / returning / work / statement / services / footer / idle /
-       email / copied); projects[] is keyed by case-page slug and falls
-       back to the generic work line when a project has no line yet. */
+    /* guide avatar (js/avatar.js) — the dithered SVG companion.
+       Every word it says lives here; the script holds no copy of its
+       own. lines.* are keyed by trigger (page sections + greeting);
+       reactions.* are arrays picked at random with no immediate repeat;
+       anchors key the fixed position per page; thresholds hold every
+       timing/limit so the script stays policy-free. No image — the
+       avatar is drawn as inline SVG (see js/avatar.js). */
     avatar: {
-      image: 'assets/avatar/guide.png',
       email: 'ragulthedeveloper@gmail.com',
+      accent: 'Ragul',                       /* the first line highlights this word */
+
+      /* page + section lines */
       lines: {
         hero: 'Hi, I’m Ragul. Stick around and I’ll walk you through what I build.',
         returning: 'Back again? Pick up where you left off.',
         work: 'Stores, CRMs and billing software. Take a look.',
         statement: 'Dashboards for every role. Content your team can publish themselves.',
-        services: 'Websites, Shopify stores, web apps and UI/UX design. That’s what I do.',
+        services: 'Websites, Shopify stores, web apps and UI/UX. Pick one.',
+        about: 'That’s the short version of me.',
+        experience: 'Huemind now, Neoera before.',
+        skills: 'These are the tools I work with.',
+        certificates: 'Tap a card to open it.',
+        resume: 'Download it, or just read it here.',
+        github: 'Live from GitHub.',
+        contact: 'Write to me anytime. Click and the email is copied.',
         footer: 'Write to me anytime. Click and the email is copied.',
-        email: 'Write to me anytime. Click and the email is copied.',
-        copied: 'Copied. I’ll be waiting.',
-        idle: 'You can drag me around.'
+        copied: 'Copied. I’ll be waiting.'
       },
+
+      /* project commentary — facts only; slugs without a line fall back
+         to “<title> — <type>” built from projects[] inside the script */
       projects: {
-        theworldofnerds: 'TWON is a Shopify store for anime and pop-culture collectibles.',
+        theworldofnerds: 'The World of Nerds is a Shopify store for anime and pop-culture collectibles.',
         evarrah: 'Evarrah is a Shopify store.',
         opalline: 'Opalline is a Shopify store plus billing software.',
-        v4startup: 'V4 Startup is a complete CRM with separate dashboards for admin, employees and clients.',
-        voiceofjagadguru: 'Voice of Jagadguru is a complete website with a CMS the team uses to upload content themselves.'
+        v4startup: 'V4 Startup is a complete CRM with separate dashboards for admins, employees and clients.',
+        voiceofjagadguru: 'Voice of Jagadguru is a complete website with a CMS the owners use to upload content themselves.'
+      },
+
+      /* reaction lines — 2–3 variations each, picked with no repeat */
+      reactions: {
+        nose: {
+          cough: ['Acho— oh. That tickles.', 'Hey, gentle with the nose.', 'Wrong hole, friend.'],
+          sneeze: ['AHH-CHOO! Warn a guy.', 'My nose has feelings, you know.'],
+          enough: ['That’s enough nose, thanks.']
+        },
+        body: {
+          giggle: ['Hehe— stop it!', 'Ticklish! Very ticklish!', 'Okayokayokay— haha!'],
+          stop: ['Stop, I can’t breathe— hahaha!', 'Too much! I yield! I yield!']
+        },
+        head: {
+          pat: ['Head pats? Approved.', 'That’s the spot.', 'A little lower… perfect.']
+        },
+        eyes: {
+          flinch: ['My eyes! They’re sensitive.', 'Careful with those!', 'Blink and you’ll miss it.']
+        },
+        ear: {
+          flick: ['Ear wiggles: engaged.', 'Did you hear that?', 'Hello in there?']
+        },
+        mouth: {
+          chatter: ['Blah blah blah— you get it.', 'Words! I have so many.', 'Talking to myself again.']
+        },
+        idle: {
+          yawn: ['*yaaawn* …long day.', 'Just resting my eyes.', 'Hmm? Oh— hi.'],
+          sleep: ['z z Z …', 'ZzZz…', 'zzz… (don’t prod me)'],
+          wake: ['I wasn’t sleeping!', 'Who— oh. Hello.', 'Just… meditating.']
+        },
+        dizzy: {
+          slow: ['Whoa— slow down!', 'The room is spinning.', 'Scroll much?']
+        },
+        hints: {
+          nose: ['Try poking my nose.', 'Psst— tap the nose.'],
+          tickle: ['I’m ticklish, you know.', 'The body is a no— wait, yes zone.'],
+          pick: ['Hold me to pick me up.', 'Press and hold to lift me.']
+        }
+      },
+
+      /* fixed positions per page — the key is the page slug (index.html
+         → "index", work/v4startup.html → "v4startup"); unknown pages
+         use "default". Each entry: selector (which section must be in
+         view), side (left|right), size (avatar width px), bottom (px
+         from the viewport bottom, before avoidance), line (a key in
+         lines above, or "project" for a case page). */
+      anchors: {
+        index: [
+          { selector: '.hero', side: 'right', size: 300, bottom: 24, line: 'hero' },
+          { selector: '.selected-work', side: 'right', size: 150, bottom: 24, line: 'work' },
+          { selector: '.statement', side: 'left', size: 150, bottom: 24, line: 'statement' },
+          { selector: '.service-tiles', side: 'right', size: 150, bottom: 24, line: 'services' },
+          { selector: '.footer', side: 'right', size: 150, bottom: 24, line: 'footer' }
+        ],
+        contact: [{ selector: '.contact-form', side: 'left', size: 150, bottom: 24, line: 'contact' }],
+        about: [{ selector: '.columns', side: 'right', size: 150, bottom: 24, line: 'about' }],
+        experience: [{ selector: '[data-render="experience"]', side: 'right', size: 150, bottom: 24, line: 'experience' }],
+        skills: [{ selector: '[data-render="skills"]', side: 'right', size: 150, bottom: 24, line: 'skills' }],
+        certificates: [{ selector: '[data-render="certificates"]', side: 'right', size: 150, bottom: 24, line: 'certificates' }],
+        resume: [{ selector: '[data-render="resume"]', side: 'right', size: 150, bottom: 24, line: 'resume' }],
+        github: [{ selector: '[data-render="github"]', side: 'right', size: 150, bottom: 24, line: 'github' }],
+        work: [{ selector: '[data-render="workIndex"]', side: 'right', size: 150, bottom: 24, line: 'work' }],
+        services: [{ selector: '.service-list', side: 'right', size: 150, bottom: 24, line: 'services' }],
+        /* case pages + service details fall back here */
+        default: [{ selector: 'body', side: 'right', size: 150, bottom: 24, line: 'project' }]
+      },
+
+      thresholds: {
+        travelMs: 900,          /* hop travel between anchors */
+        enterMs: 700,           /* entrance peek */
+        flipMs: 500,            /* horizontal flip on side change */
+        blinkMinMs: 3000, blinkMaxMs: 6000, blinkMs: 120,
+        pokeWindowMs: 6000, pokeSneeze: 3, pokeEnough: 4, calmResetMs: 10000,
+        coughMs: 700, sneezeMs: 850, patMs: 650, flinchMs: 400, giggleMs: 700,
+        flickMs: 600, chatterMs: 600, yawnMs: 1400, sleepMs: 0, wakeMs: 600,
+        dizzyMs: 1200, holdMs: 450, pickupMs: 260,
+        tickleMs: 400, tickleStopMs: 3000, tickleEndMs: 600,
+        hintMs: 8000, hideMs: 5000, typeMs: 26,
+        idleYawnMs: 25000, idleSleepMs: 50000,
+        fastScrollMs: 1000, fastScrollPx: 900,
+        eyePx: 4, headPx: 3, leanDeg: 4,
+        avoidGap: 10,           /* clearance kept above controls/header */
+        avoidStep: 6            /* px per avoidance probe */
       }
     },
 
