@@ -153,8 +153,27 @@ async function checkBasics(page, rel, vp, errors, failures) {
 /* ------------------------------------------------- footer / tap targets */
 
 async function checkFooter(page, rel, vp, failures) {
-  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-  await page.waitForTimeout(900);
+  /* github.html re-renders after its live fetch — keep re-settling at the
+     bottom until every footer target is actually inside the viewport */
+  let ready = false;
+  for (let i = 0; i < 6 && !ready; i++) {
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForTimeout(800);
+    ready = await page.evaluate(() => {
+      const els = Array.prototype.slice.call(document.querySelectorAll('.footer a, .footer button'));
+      if (!els.length) return false;
+      return els.every((el) => {
+        const b = el.getBoundingClientRect();
+        if (!b.width || !b.height) return false;
+        const cy = b.top + b.height / 2;
+        return cy >= 0 && cy <= window.innerHeight;
+      });
+    });
+  }
+  if (!ready) {
+    fail(failures, rel, vp, 'footer links never reached the viewport');
+    return null;
+  }
   const m = await page.evaluate(() => {
     const g = document.querySelector('.guide');
     const gr = g.getBoundingClientRect();
@@ -168,7 +187,9 @@ async function checkFooter(page, rel, vp, failures) {
     const probe = (el) => {
       const b = el.getBoundingClientRect();
       if (!b.width || !b.height) return;
-      const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+      const cy = b.top + b.height / 2;
+      if (cy < 0 || cy > window.innerHeight) return;   /* off-screen: not probeable */
+      const hit = document.elementFromPoint(b.left + b.width / 2, cy);
       if (!hit || !(hit === el || el.contains(hit) || hit.contains(el))) {
         unreachable.push((el.textContent || '').trim().slice(0, 24) + ' -> ' +
           (hit ? hit.className || hit.tagName : 'null'));

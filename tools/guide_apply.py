@@ -1,6 +1,7 @@
-"""Marker-guarded page editor for the guide avatar.
+"""Marker-guarded editor for the guide avatar.
 
-The HTML pages are never edited outside a marker pair. Every page gets
+PAGES — the HTML pages are never edited outside a marker pair. Every
+page gets
 
     <!-- guide:head:start -->
     <script src="<prefix>js/avatar.js" defer></script>
@@ -11,10 +12,15 @@ this script ever performs); from then on every run rewrites only the
 text between the markers, so the tool is idempotent and cannot touch
 any other part of a page.
 
+CSS — the marked section of css/style.css (between the lines holding
+"marker: guide-avatar START" and "marker: guide-avatar END") is
+refreshed from tools/guide_avatar.css, again only inside the markers.
+
 Usage:
     py tools\\guide_apply.py            rewrite the marked regions
     py tools\\guide_apply.py --check    verify, write nothing
 """
+import io
 import os
 import re
 import sys
@@ -23,6 +29,14 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 START = '<!-- guide:head:start -->'
 END = '<!-- guide:head:end -->'
 ANCHOR = re.compile(r'[ \t]*<script src="[^"]*js/main\.js" defer></script>[ \t]*\r?\n')
+CSS_PATH = os.path.join(ROOT, 'css', 'style.css')
+CSS_FILE = os.path.join(ROOT, 'tools', 'guide_avatar.css')
+CSS_START = 'marker: guide-avatar START'
+CSS_END = 'marker: guide-avatar END'
+
+
+def io_open(path, mode='r'):
+    return io.open(path, mode, encoding='utf-8', newline='')
 
 
 def build_block(prefix, eol='\n'):
@@ -31,7 +45,7 @@ def build_block(prefix, eol='\n'):
             END)
 
 
-def transform(text, prefix, rel):
+def transform_page(text, prefix, rel):
     eol = '\r\n' if '\r\n' in text else '\n'
     has_start = START in text
     has_end = END in text
@@ -52,9 +66,47 @@ def transform(text, prefix, rel):
     return new, 'marked'
 
 
+def marker_region(lines, start_token, end_token, what):
+    """Line indices of the marked region — both markers are required."""
+    begin = None
+    for i, line in enumerate(lines):
+        if begin is None:
+            if start_token in line:
+                begin = i
+        elif end_token in line:
+            return begin, i
+    raise SystemExit('%s: guide-avatar markers missing or incomplete' % what)
+
+
+def transform_css(text):
+    with io_open(CSS_FILE) as fh:
+        block = fh.read()
+    block_lines = block.split('\n')
+    b0, b1 = marker_region(block_lines, CSS_START, CSS_END, CSS_FILE)
+    region = block_lines[b0:b1 + 1]
+
+    lines = text.split('\n')
+    a0, a1 = marker_region(lines, CSS_START, CSS_END, 'css/style.css')
+    if lines[a0:a1 + 1] == region:
+        return text, 'ok'
+    new = '\n'.join(lines[:a0] + region + lines[a1 + 1:])
+    return new, 'refreshed'
+
+
 def main():
     check = '--check' in sys.argv
     changed = 0
+
+    with io_open(CSS_PATH) as fh:
+        text = fh.read()
+    new, status = transform_css(text)
+    if status != 'ok':
+        changed += 1
+        if not check:
+            with io_open(CSS_PATH, 'w') as fh:
+                fh.write(new)
+    print('  %-8s css/style.css' % (status.upper() if check else status))
+
     for dirpath, dirnames, filenames in os.walk(ROOT):
         dirnames[:] = [d for d in dirnames if d not in ('assets', 'tools', 'node_modules')]
         for name in sorted(filenames):
@@ -62,27 +114,18 @@ def main():
                 continue
             path = os.path.join(dirpath, name)
             rel = os.path.relpath(path, ROOT).replace('\\', '/')
-            depth = rel.count('/')
-            prefix = '../' * depth
+            prefix = '../' * rel.count('/')
             with io_open(path) as fh:
                 text = fh.read()
-            new, status = transform(text, prefix, rel)
-            if status == 'ok':
-                print('  ok       %s' % rel)
-                continue
-            changed += 1
-            if check:
-                print('  %-8s %s' % (status.upper(), rel))
-                continue
-            with io_open(path, 'w') as fh:
-                fh.write(new)
-            print('  %-8s %s' % (status, rel))
-    print('%s %d page(s)' % ('would change' if check else 'changed', changed))
+            new, status = transform_page(text, prefix, rel)
+            if status != 'ok':
+                changed += 1
+                if not check:
+                    with io_open(path, 'w') as fh:
+                        fh.write(new)
+            print('  %-8s %s' % (status.upper() if check else status, rel))
 
-
-def io_open(path, mode='r'):
-    import io
-    return io.open(path, mode, encoding='utf-8', newline='')
+    print('%s %d file(s)' % ('would change' if check else 'changed', changed))
 
 
 if __name__ == '__main__':

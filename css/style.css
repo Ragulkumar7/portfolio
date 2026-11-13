@@ -5734,8 +5734,9 @@ html:not([data-todos-on]) [data-todo] {
 }
 
 
+/* marker: guide-avatar START */
 /* ==========================================================================
-   Guide avatar (js/avatar.js) — marker: guide-avatar START
+   Guide avatar (js/avatar.js)
    Fixed bottom-right companion: 160px on desktop, 96px at ≤700px
    (96px at 390px). z-index 90 — above page content, below the menu
    overlay (95), the page transition (9000), the cursor (9790+) and the
