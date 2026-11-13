@@ -68,6 +68,12 @@
       email: 'ragulthedeveloper@gmail.com',
       accent: 'Ragul',                       /* the first line highlights this word */
 
+      /* elements the avatar must never sit on: if its box ever touches
+         one of these the guide hides (the marquee sweeps the whole
+         width while the page scrolls, so it can only be dodged by
+         stepping aside, never by raising) */
+      hideOver: ['.marquee'],
+
       /* page + section lines */
       lines: {
         hero: 'Hi, I’m Ragul. Stick around and I’ll walk you through what I build.',
@@ -139,10 +145,33 @@
          use "default". Each entry: selector (which section must be in
          view), side (left|right), size (avatar width px), bottom (px
          from the viewport bottom, before avoidance), line (a key in
-         lines above, or "project" for a case page). */
+         lines above, or "project" for a case page).
+
+         "place" (index/.hero only) switches the anchor off the fixed
+         bottom band and computes its spot from real element rects:
+           ref      the element to sit beside (first .hero__line = RAGUL)
+           edge     'right' = hug the right edge, 'ref-right' = sit
+                    immediately right of ref
+           size/hGap/avoid  as above, per breakpoint
+           mobile   same keys, used at ≤700px
+         "hide": true pins the avatar away while that anchor is active
+         (the marquee). "noBubbleUntilTap" holds the bubble until the
+         visitor taps the avatar.                                         */
       anchors: {
         index: [
-          { selector: '.hero', side: 'right', size: 300, bottom: 24, line: 'hero' },
+          { selector: '.hero', side: 'right', size: 300, bottom: 24, line: 'hero',
+            place: {
+              ref: '.hero__line', edge: 'right', side: 'right', size: 300, hGap: 20,
+              avoid: ['.hero__line--second', '.hero__top', '.header', '.hero__button'],
+              mobile: {
+                /* bubble on the outer side: the stage then never has to
+                   shuffle sideways when the bubble finally appears */
+                ref: '.hero__button', edge: 'ref-right', side: 'left', size: 90, hGap: 12,
+                avoid: ['.hero__top', '.header', '.marquee', '.hero__line--second', '.hero__intro'],
+                noBubbleUntilTap: true
+              }
+            } },
+          { selector: '.marquee', side: 'right', size: 150, bottom: 24, line: '', hide: true },
           { selector: '.selected-work', side: 'right', size: 150, bottom: 24, line: 'work' },
           { selector: '.statement', side: 'left', size: 150, bottom: 24, line: 'statement' },
           { selector: '.service-tiles', side: 'right', size: 150, bottom: 24, line: 'services' },

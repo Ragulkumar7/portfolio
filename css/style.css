@@ -5829,8 +5829,10 @@ html:not([data-todos-on]) [data-todo] {
 .guide__bubble {
   position: relative;
   box-sizing: border-box;
-  pointer-events: auto;
-  max-width: min(260px, calc(100vw - var(--guide-size) - 48px));
+  pointer-events: none;        /* only a bubble that is showing is clickable */
+  /* --guide-bubble-max is set by a "place" anchor so the cluster never
+     reaches back over the element it is parked beside */
+  max-width: min(var(--guide-bubble-max, 260px), calc(100vw - var(--guide-size) - 48px));
   padding: 11px 14px;
   border-radius: 10px;
   background: #edeae4;                 /* paper */
@@ -5838,14 +5840,24 @@ html:not([data-todos-on]) [data-todo] {
   font-family: var(--font-sans);
   font-size: 13.5px;
   line-height: 1.45;
+  /* let a long word wrap so the narrow mobile bubble can shrink inside
+     the cluster instead of spilling past the viewport edge */
+  overflow-wrap: anywhere;
   opacity: 0;
   transform: translateY(6px);
   transition: opacity .3s var(--ease-out), transform .3s var(--ease-out);
 }
 
 .guide__bubble[data-open] {
+  pointer-events: auto;
   opacity: 1;
   transform: none;
+}
+
+/* a held bubble (mobile hero, before the first tap) is out of the
+   layout altogether so the cluster is the avatar alone */
+.guide__bubble[data-hold] {
+  display: none;
 }
 
 /* the invisible full line reserves the final height while typing */
@@ -6122,7 +6134,7 @@ html:not([data-todos-on]) [data-todo] {
     gap: 8px;
   }
   .guide__bubble {
-    max-width: calc(100vw - var(--guide-size) - 44px);
+    max-width: min(var(--guide-bubble-max, 260px), calc(100vw - var(--guide-size) - 44px));
     padding: 10px 12px;
     font-size: 13px;
   }

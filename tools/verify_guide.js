@@ -193,7 +193,7 @@ const ZONES = [
   { zone: 'body', vx: 100, vy: 200, state: 'giggle' },
   { zone: 'head', vx: 70, vy: 135, state: 'pat' },
   { zone: 'hair', vx: 100, vy: 60, state: 'pat' },
-  { zone: 'eyes', vx: 100, vy: 105, state: 'flinch' }
+  { zone: 'eyes', vx: 84, vy: 106, state: 'flinch' }   /* left eye, clear of the nose */
 ];
 
 async function checkZones(browser, failures) {
@@ -243,7 +243,10 @@ async function checkZones(browser, failures) {
 /* --------------------------------------------------------- anchors ---- */
 
 const HOME_ANCHORS = [
-  { sel: '.hero', side: 'right', size: '300' },
+  /* the hero parks beside RAGUL on desktop and beside the CTA on mobile
+     (side flips so the bubble takes the outer side and the stage never
+     shuffles when it appears) */
+  { sel: '.hero', side: 'right', sideMobile: 'left', size: '300', sizeMobile: '90' },
   { sel: '.selected-work', side: 'right', size: '150' },
   { sel: '.statement', side: 'left', size: '150' },
   { sel: '.service-tiles', side: 'right', size: '150' },
@@ -277,8 +280,10 @@ async function checkAnchors(browser, failures) {
         fail(failures, rel, vp.name, 'anchor ' + a.sel, 'guide hidden (suppressed=' + st.suppressed + ')');
         continue;
       }
-      if (st.side !== a.side) fail(failures, rel, vp.name, 'anchor ' + a.sel, `side "${st.side}" want "${a.side}"`);
-      if (st.size !== a.size) fail(failures, rel, vp.name, 'anchor ' + a.sel, `size ${st.size} want ${a.size}`);
+      const wantSide = (vp.width <= 700 && a.sideMobile) ? a.sideMobile : a.side;
+      if (st.side !== wantSide) fail(failures, rel, vp.name, 'anchor ' + a.sel, `side "${st.side}" want "${wantSide}"`);
+      const wantSize = (vp.width <= 700 && a.sizeMobile) ? a.sizeMobile : a.size;
+      if (st.size !== wantSize) fail(failures, rel, vp.name, 'anchor ' + a.sel, `size ${st.size} want ${wantSize}`);
       await checkRect(page, rel, vp.name, failures, 'anchor ' + a.sel + ' rect');
     }
     if (errors.length) fail(failures, rel, vp.name, 'console errors (anchors)', errors.join(' | '));

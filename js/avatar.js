@@ -156,6 +156,10 @@
   var enabled = lsGet('guide:enabled') !== '0';
   var entered = false;
   var suppressed = '';              /* '' | 'overlay' | 'transition' */
+  var anchorHide = false;           /* the active anchor says "stay away" */
+  var overlapHide = false;          /* the avatar box touches a hideOver element */
+  var bubbleHold = false;           /* no bubble until the visitor taps */
+  var tapReleased = false;
 
   var anchor = null;                /* current anchor object */
   var anchorIdx = -1;
@@ -172,6 +176,7 @@
   /* eye/head follow */
   var ptr = { x: window.innerWidth / 2, y: window.innerHeight / 2, seen: false, t: 0 };
   var eyeX = 0, eyeY = 0, headX = 0, headY = 0;
+  var sideLeft = false;              /* the flip mirrors the SVG, so X inverts */
 
   /* reaction bookkeeping */
   var stateTimer = 0;
@@ -189,6 +194,7 @@
   var shown = null;                 /* text currently rendered */
   var typeTimer = 0, hideTimer = 0;
   var typing = false;
+  var heldEntry = null;             /* a line recorded while the bubble is held */
 
   /* timers */
   var blinkTimer = 0;
@@ -244,7 +250,21 @@
     })();
   }
 
+  /* while the active anchor holds the bubble (noBubbleUntilTap) it is
+     taken out of the layout entirely: the cluster collapses to just the
+     avatar, so nothing can be covered by a bubble that is not shown */
+  function syncBubbleHold() {
+    if (bubbleHold) {
+      bubble.setAttribute('data-hold', '');
+      if (current) { current.retired = true; current = null; window.clearTimeout(hideTimer); }
+      if (bubble.hasAttribute('data-open')) closeBubble();
+      return;
+    }
+    bubble.removeAttribute('data-hold');
+  }
+
   function openBubble() {
+    if (bubbleHold) return;                 /* held — nothing to show yet */
     bubble.setAttribute('data-open', '');
     scheduleAvoid();
   }
@@ -252,6 +272,19 @@
   function closeBubble() {
     bubble.removeAttribute('data-open');
     shown = null;
+    scheduleAvoid();
+  }
+
+  /* first tap lifts the hold. replay the held line unless a reaction is
+     about to speak instead (a zone tap gets its own, much shorter line) */
+  function releaseBubbleHold(replay) {
+    if (!bubbleHold) return;
+    tapReleased = true;
+    bubbleHold = false;
+    syncBubbleHold();
+    var held = heldEntry;
+    heldEntry = null;
+    if (replay !== false && held) showLine(held.line, held.prio, held.id);
     scheduleAvoid();
   }
 
@@ -263,7 +296,9 @@
   function pickLine(entry) {
     if (entry.line === 'project') return projectLine(slug);
     if (entry.line === 'copied') return LINES.copied || '';
-    return LINES[entry.line] || '';
+    /* sections/greetings pass a key into LINES; a reaction passes its
+       line as literal text — resolve the key first, else use it as-is */
+    return LINES[entry.line] || entry.line || '';
   }
 
   function startEntry(entry) {
@@ -301,6 +336,12 @@
   }
 
   function showLine(line, prio, id) {
+    /* held (mobile hero): remember the line instead of drawing it, so a
+       tap can replay the strongest thing that wanted to be said */
+    if (bubbleHold) {
+      if (!heldEntry || prio >= heldEntry.prio) heldEntry = { line: line, prio: prio, id: id };
+      return;
+    }
     var entry = { line: line, prio: prio, id: id, retired: false };
     if (current && !current.retired) {
       if (prio > current.prio) {
@@ -434,6 +475,10 @@
   stage.addEventListener('click', function (e) {
     if (!enabled || suppressed || !entered) return;
     var z = zoneOf(e);
+    var reacts = z === 'nose' || z === 'body' || z === 'hair' || z === 'head' || z === 'eyes';
+    /* a zone tap speaks its own (short) line — only a zone-less tap
+       replays the held greeting */
+    releaseBubbleHold(!reacts);
     if (!z) return;
     if (z === 'nose') pokeNose();
     else if (z === 'body') {
@@ -504,10 +549,12 @@
   function computeAvoid() {
     if (!anchor) { avoidTargetY = 0; return; }
 
-    /* base rect: #guide at its CSS position with no transforms */
+    /* base rect: #guide at its CSS position with no transforms. a parked
+       ("place") anchor is judged on its stage alone — the reserved space
+       of a bubble that is not showing must not shove it off its spot */
     var prevT = wrap.style.transform;
     wrap.style.transform = 'translate3d(0px,0px,0px)';
-    var base = wrap.getBoundingClientRect();
+    var base = placeFor(anchor) ? stage.getBoundingClientRect() : wrap.getBoundingClientRect();
     wrap.style.transform = prevT;
 
     var baseTop = base.top, baseBottom = base.bottom, baseLeft = base.left, baseRight = base.right;
@@ -589,6 +636,7 @@
       avoidQueued = false;
       if (!enabled || !entered) return;
       computeAvoid();
+      checkHideOver();
       /* no motion: snap the raise instead of smoothing it */
       if (!motionOn()) { avoidY = avoidTargetY; applyTransforms(); }
       ensureLoop();
@@ -617,6 +665,7 @@
     else if (root.hasAttribute('data-intro')) reason = 'intro';
     else if (root.hasAttribute('data-transition-resume')) reason = 'transition';
     else if (transitionMidCover()) reason = 'transition';
+    else if (!entered && !entranceActive) reason = 'wait';   /* before the first peek */
     if (reason === suppressed) return;
     suppressed = reason;
     applyHidden();
@@ -631,32 +680,224 @@
     applyHidden();
   }
   function applyHidden() {
-    var hide = !!suppressed || blocked;
-    if (hide) wrap.setAttribute('data-suppressed', suppressed || 'blocked');
+    var reason = suppressed ||
+      (anchorHide ? 'anchor' : '') ||
+      (overlapHide ? 'overlap' : '') ||
+      (blocked ? 'blocked' : '');
+    if (reason) wrap.setAttribute('data-suppressed', reason);
     else wrap.removeAttribute('data-suppressed');
-    if (hide) { stopLoop(); window.clearTimeout(hideTimer); }
+    if (reason) { stopLoop(); window.clearTimeout(hideTimer); }
     else { scheduleAvoid(); ensureLoop(); }
+  }
+
+  /* hideOver — elements the avatar may never sit on. the marquee is a
+     full-width strip that sweeps the viewport as the page scrolls, so
+     the only way never to cover its words is to step aside for it */
+  var HIDE_OVER = CFG.hideOver || [];
+  function checkHideOver() {
+    if (!HIDE_OVER.length) { setOverlapHide(false); return; }
+    var sr = stage.getBoundingClientRect();
+    var open = bubble.hasAttribute('data-open');
+    var br = open ? bubble.getBoundingClientRect() : null;
+    for (var i = 0; i < HIDE_OVER.length; i++) {
+      var el = qs(HIDE_OVER[i]);
+      if (!el || !el.getClientRects().length) continue;
+      var r = el.getBoundingClientRect();
+      if (r.bottom <= 0 || r.top >= window.innerHeight) continue;   /* off-screen */
+      var hit = function (a) {
+        return a.left < r.right && a.right > r.left && a.top < r.bottom && a.bottom > r.top;
+      };
+      if (hit(sr) || (br && hit(br))) { setOverlapHide(true); return; }
+    }
+    setOverlapHide(false);
+  }
+
+  function setOverlapHide(on) {
+    if (on === overlapHide) return;
+    overlapHide = on;
+    applyHidden();
+  }
+
+  /* ------------------------------------------------- placed anchors */
+
+  var MQ_NARROW = window.matchMedia('(max-width: 700px)');
+  function isNarrow() { return MQ_NARROW.matches; }
+
+  /* ink extent of a text element — the union of its kinetic-letter
+     glyphs (the ::before marks the real paint), else its own box */
+  function inkRect(el) {
+    if (!el) return null;
+    var kids = qsa('.kinetic__letter', el);
+    if (!kids.length) {
+      var r = el.getBoundingClientRect();
+      if (!r.width && !r.height) return null;
+      return { l: r.left, r: r.right, t: r.top, b: r.bottom,
+               cy: r.top + r.height / 2, cx: r.left + r.width / 2 };
+    }
+    var l = Infinity, rr = -Infinity, t = Infinity, b = -Infinity;
+    for (var i = 0; i < kids.length; i++) {
+      var q = kids[i].getBoundingClientRect();
+      if (!q.width && !q.height) continue;
+      l = Math.min(l, q.left); rr = Math.max(rr, q.right);
+      t = Math.min(t, q.top); b = Math.max(b, q.bottom);
+    }
+    if (l === Infinity) return null;
+    return { l: l, r: rr, t: t, b: b, cy: (t + b) / 2, cx: (l + rr) / 2 };
+  }
+
+  /* the place block for this anchor at this width (null = plain anchor) */
+  function placeFor(a) {
+    if (!a || !a.place) return null;
+    var p = a.place;
+    if (isNarrow()) return p.mobile || null;
+    return p;
+  }
+
+  function anchorSize(a) {
+    var p = placeFor(a);
+    return (p && p.size) || a.size;
+  }
+
+  /* Park a "place" anchor against a real element instead of the fixed
+     bottom band. Everything — the vertical band, the centre, the gap,
+     the bubble cap — is derived from getBoundingClientRect()/getBBox(),
+     never from a magic number. */
+  function positionPlaced(a, p) {
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var gap = TH.avoidGap || 10;
+    var hGap = p.hGap || 16;
+    var ref = qs(p.ref) || doc.body;
+    var refInk = inkRect(ref);
+    if (!refInk) return;
+
+    var stageW = stage.offsetWidth;
+    var stageH = stage.offsetHeight;
+
+    /* centre the VISIBLE drawing on the ref — the stage carries ~19%
+       empty headroom above the head, so the box centre is not the
+       avatar's centre. read the real viewBox + bbox to get the offset */
+    var vbH = 220, drawMid = 110;
+    var svgEl = qs('#av', wrap);
+    try {
+      if (svgEl && svgEl.viewBox && svgEl.viewBox.baseVal && svgEl.viewBox.baseVal.height) {
+        vbH = svgEl.viewBox.baseVal.height;
+        var bb = svgEl.getBBox();
+        drawMid = bb.y + bb.height / 2;
+      }
+    } catch (e) { /* keep the viewBox centre fallback */ }
+    var drawMidOff = (drawMid / vbH) * stageH;
+
+    /* vertical band: rects whose bottom sits above the ref's centre cap
+       the top, rects whose top sits below it cap the bottom. the fixed
+       header always caps the top. use the INK of a text line — its block
+       box carries line-height padding that is not really "the name". */
+    var bandTop = 0, bandBottom = vh;
+    var avoidSel = ['.header'].concat(p.avoid || []);
+    for (var i = 0; i < avoidSel.length; i++) {
+      var el = qs(avoidSel[i]);
+      if (!el) continue;
+      var r = inkRect(el);
+      if (!r) continue;
+      if (avoidSel[i] === '.header' || r.b <= refInk.cy) bandTop = Math.max(bandTop, r.b);
+      else if (r.t >= refInk.cy) bandBottom = Math.min(bandBottom, r.t);
+    }
+    bandTop = Math.max(bandTop, 0);
+    bandBottom = Math.min(bandBottom, vh);
+
+    /* shrink the anchor if the band is shorter than the avatar */
+    var slack = bandBottom - bandTop - stageH;
+    if (slack < 0) {
+      var fit = Math.max(60, Math.round(anchorSize(a) * (bandBottom - bandTop) / Math.max(1, stageH)));
+      wrap.style.setProperty('--guide-size-base', fit + 'px');
+      stageW = stage.offsetWidth;
+      stageH = stage.offsetHeight;
+      slack = bandBottom - bandTop - stageH;
+      drawMidOff = (drawMid / vbH) * stageH;
+    }
+    var g = Math.min(gap, Math.max(0, slack) / 2);
+
+    var idealTop = refInk.cy - drawMidOff;
+    var top = clamp(idealTop, bandTop + g, bandBottom - g - stageH);
+
+    /* horizontal: hug the edge, or park right of the reference. the gutter
+       is whatever clamp(…) applyAnchorBase already put in place — read the
+       resolved value instead of repeating those numbers here */
+    var side = p.side || a.side;
+    var cs = window.getComputedStyle(wrap);
+    var edge = parseFloat(cs.right) || parseFloat(cs.left) || 0;
+    var stageLeft, leftMargin = edge;
+    if (p.edge === 'ref-right') {
+      stageLeft = refInk.r + hGap;
+      wrap.style.left = stageLeft + 'px';
+      wrap.style.right = 'auto';
+    } else if (side === 'left') {
+      stageLeft = edge;                    /* applyAnchorBase's clamp stands */
+    } else {
+      stageLeft = vw - edge - stageW;      /* applyAnchorBase's clamp stands */
+    }
+    wrap.style.top = 'auto';
+    wrap.style.bottom = (vh - (top + stageH)) + 'px';
+
+    /* bubble: cap it so the cluster never reaches back over the element it
+       is parked beside and never past the gutter. the bubble sits on the
+       avatar's outer side, so which edge it starts from depends on side */
+    var gapH = parseFloat(window.getComputedStyle(wrap).gap) || 12;
+    var bubbleEdge, byRef, byView;
+    if (side === 'left') {
+      bubbleEdge = stageLeft + stageW + gapH;   /* the bubble's inner edge */
+      byView = (vw - edge) - bubbleEdge;        /* room out to the gutter */
+      byRef = Infinity;                         /* the ref is on the far side */
+    } else {
+      bubbleEdge = stageLeft - gapH;            /* the bubble's inner edge */
+      byView = bubbleEdge - leftMargin;
+      byRef = bubbleEdge - refInk.r - hGap;
+    }
+    var cap = Math.min(260, byView);
+    if (byRef >= 120) cap = Math.min(cap, byRef);
+    wrap.style.setProperty('--guide-bubble-max', Math.round(Math.max(120, cap)) + 'px');
+  }
+
+  /* re-derive the parked spot after a resize / late layout settle */
+  function reposition() {
+    if (!anchor) return;
+    var p = placeFor(anchor);
+    if (!p) return;
+    applyAnchorBase(anchor);
+    computeAvoid();
+    applyTransforms();
   }
 
   /* ------------------------------------------------------------- travel */
 
   function applyAnchorBase(a) {
     anchor = a;
-    wrap.setAttribute('data-side', a.side);
-    wrap.style.setProperty('--guide-size-base', a.size + 'px');
-    if (a.side === 'left') {
+    var p = placeFor(a);
+    var side = (p && p.side) || a.side;
+    sideLeft = side === 'left';
+    wrap.setAttribute('data-side', side);
+    wrap.style.setProperty('--guide-size-base', anchorSize(a) + 'px');
+    if (side === 'left') {
       wrap.style.left = 'clamp(14px, 2vw, 26px)';
       wrap.style.right = 'auto';
     } else {
       wrap.style.right = 'clamp(14px, 2vw, 26px)';
       wrap.style.left = 'auto';
     }
+    wrap.style.top = 'auto';
     wrap.style.bottom = (a.bottom || 0) + 'px';
+    wrap.style.removeProperty('--guide-bubble-max');
+
+    anchorHide = !!a.hide;
+    bubbleHold = !!(p && p.noBubbleUntilTap) && !tapReleased;
+    syncBubbleHold();
+    if (p) positionPlaced(a, p);
+    applyHidden();
   }
 
   function travelTo(a) {
     if (!a) return;
     var first = !anchor;
+    heldEntry = null;              /* leaving an anchor drops its unshown held line */
     var oldRect = entered ? wrap.getBoundingClientRect() : null;
     applyAnchorBase(a);
 
@@ -711,6 +952,8 @@
 
   function runEntrance() {
     if (!enabled) return;
+    /* park against the settled hero first, then let it peek up */
+    reposition();
     if (!motionOn()) {
       entranceY = 0;
       entranceActive = false;
@@ -730,6 +973,7 @@
     entranceActive = true;
     entered = false;
     wrap.removeAttribute('data-entered');
+    updateSuppress();          /* entranceActive → drops the pre-peek hold */
     ensureLoop();
   }
 
@@ -803,13 +1047,14 @@
       if (Math.abs(lean) < 0.02) { lean = 0; leanTarget = 0; }
       if (performance.now() > scrollActiveT) leanTarget = 0;
 
-      /* eye + head follow the pointer */
+      /* eye + head follow the pointer (X flips when the SVG is mirrored) */
       if (FINE.matches && ptr.seen) {
         var cx = window.innerWidth / 2, cy = window.innerHeight / 2;
         var nx = clamp((ptr.x - cx) / cx, -1, 1);
         var ny = clamp((ptr.y - cy) / cy, -1, 1);
-        var ex = nx * (TH.eyePx || 4), ey = ny * (TH.eyePx || 4);
-        var hx = nx * (TH.headPx || 3), hy = ny * (TH.headPx || 3);
+        var sx = sideLeft ? -1 : 1;
+        var ex = nx * (TH.eyePx || 4) * sx, ey = ny * (TH.eyePx || 4);
+        var hx = nx * (TH.headPx || 3) * sx, hy = ny * (TH.headPx || 3);
         eyeX += (ex - eyeX) * lerpF(0.16, k);
         eyeY += (ey - eyeY) * lerpF(0.16, k);
         headX += (hx - headX) * lerpF(0.16, k);
@@ -928,6 +1173,30 @@
     mo.observe(root, { attributes: true, attributeFilter: ['data-intro'] });
   }
 
+  /* the parked spot is read from live rects, and the hero runs several
+     load animations (kinetic letters rising, data-reveal blocks) — wait
+     until their transforms are back to rest so the very first park
+     measures a settled hero. checking `transform` (not the box) means the
+     pointer-follow's font-variation changes can never stall it. */
+  function whenHeroSettled(cb) {
+    var els = qsa('.hero__line .kinetic__letter, .hero__top, .hero__intro');
+    if (!els.length) { window.setTimeout(cb, 60); return; }
+    var stable = 0, tries = 0;
+    function probe() {
+      tries++;
+      var moving = false;
+      for (var i = 0; i < els.length; i++) {
+        var t = window.getComputedStyle(els[i]).transform;
+        if (t && t !== 'none' && t !== 'matrix(1, 0, 0, 1, 0, 0)') { moving = true; break; }
+      }
+      if (!moving) stable++; else stable = 0;
+      /* absolute deadline: never make the visitor wait past ~3.6s for it */
+      if (stable >= 3 || tries > 240 || performance.now() > 3600) { cb(); return; }
+      window.requestAnimationFrame(probe);
+    }
+    window.requestAnimationFrame(probe);
+  }
+
   function bootGreeting() {
     if (!enabled) return;
     var seen = lsGet('guide:seen');
@@ -1002,8 +1271,11 @@
     scheduleAvoid();
   }, { passive: true });
 
+  var repositionTimer = 0;
   window.addEventListener('resize', function () {
     lastY = window.scrollY;
+    window.clearTimeout(repositionTimer);
+    repositionTimer = window.setTimeout(reposition, 120);
     scheduleAvoid();
   }, { passive: true });
 
@@ -1051,10 +1323,16 @@
   scheduleBlink();
   bootGreeting();
 
-  /* entrance after the intro preloader */
-  if (root.hasAttribute('data-intro')) {
-    whenIntroDone(runEntrance);
-  } else {
-    window.setTimeout(runEntrance, 350);
+  /* a parked anchor derives its spot from live rects, so re-derive once
+     webfonts/images have settled and whenever the page finishes loading */
+  function lateReposition() { if (enabled && anchor) reposition(); }
+  window.addEventListener('load', function () { window.setTimeout(lateReposition, 80); });
+  if (doc.fonts && doc.fonts.ready && doc.fonts.ready.then) {
+    doc.fonts.ready.then(function () { lateReposition(); });
   }
-})();
+  window.setTimeout(lateReposition, 700);
+
+  /* entrance: after the preloader AND once the hero name has stopped
+     moving, so the very first park reads a settled layout */
+  whenIntroDone(function () { whenHeroSettled(runEntrance); });
+})()
