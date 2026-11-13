@@ -1,0 +1,219 @@
+
+
+/* ==========================================================================
+   Guide avatar (js/avatar.js) — marker: guide-avatar START
+   Fixed bottom-right companion: 160px on desktop, 96px at ≤700px
+   (96px at 390px). z-index 90 — above page content, below the menu
+   overlay (95), the page transition (9000), the cursor (9790+) and the
+   certificate dialog (native top layer). The container itself never
+   takes the pointer; only the toggle, the bubble and the avatar do.
+   ========================================================================== */
+
+.guide {
+  --guide-size: 160px;
+  position: fixed;
+  right: clamp(14px, 2vw, 26px);
+  bottom: 20px;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  max-width: calc(100vw - 24px);
+  pointer-events: none;
+  perspective: 800px;
+}
+
+/* hidden while the menu overlay or the certificate dialog is open,
+   or when there is no room left above the footer */
+.guide[data-suppressed] {
+  visibility: hidden;
+}
+
+/* "Guide: off" keeps the toggle, drops the avatar and the bubble */
+.guide--off .guide__stage,
+.guide--off .guide__bubble {
+  display: none !important;
+}
+
+.guide[data-noimg] .guide__stage {
+  display: none;
+}
+
+/* ------------------------------------------------------------- on/off pill */
+
+.guide__toggle {
+  box-sizing: border-box;
+  pointer-events: auto;
+  min-height: 30px;
+  min-width: 84px;
+  padding: 7px 12px;
+  border: 1px solid var(--color-outline);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-label);
+  font-family: var(--font-mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-size: 10px;
+  transition: color .3s, border-color .3s;
+}
+
+.guide__toggle:hover,
+.guide__toggle:focus-visible {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+.guide__toggle[aria-pressed="false"] {
+  opacity: .65;
+}
+
+/* -------------------------------------------------------- speech bubble */
+
+.guide__bubble {
+  position: relative;
+  box-sizing: border-box;
+  pointer-events: auto;
+  max-width: min(260px, calc(100vw - 44px));
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-family: var(--font-sans);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity .3s var(--ease-out), transform .3s var(--ease-out);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.guide__bubble[data-open] {
+  opacity: 1;
+  transform: none;
+}
+
+/* the invisible full line reserves the height while the typewriter runs */
+.guide__bubble-sizer {
+  display: block;
+  visibility: hidden;
+}
+
+.guide__bubble-text {
+  position: absolute;
+  top: 11px;
+  left: 14px;
+  right: 14px;
+}
+
+/* dithered edge: a dense checkerboard band, then a sparse dot band */
+.guide__bubble::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  z-index: -1;
+  border-radius: 12px;
+  background: var(--color-text);
+  -webkit-mask-image: repeating-conic-gradient(#000 0 25%, #0000 0 50%);
+  mask-image: repeating-conic-gradient(#000 0 25%, #0000 0 50%);
+  -webkit-mask-size: 6px 6px;
+  mask-size: 6px 6px;
+  pointer-events: none;
+}
+
+.guide__bubble::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  z-index: -1;
+  border-radius: 16px;
+  background-image: radial-gradient(circle at center, var(--color-text) 1.2px, #0000 1.5px);
+  background-size: 7px 7px;
+  pointer-events: none;
+}
+
+/* pixel staircase tail — the lower steps tuck behind the avatar */
+.guide__tail {
+  position: absolute;
+  right: 28px;
+  bottom: -8px;
+  width: 8px;
+  height: 8px;
+  background: var(--color-text);
+  box-shadow: 8px 8px 0 var(--color-text), 16px 16px 0 var(--color-text);
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------- avatar */
+
+.guide__stage {
+  position: relative;
+  box-sizing: border-box;
+  pointer-events: auto;
+  width: var(--guide-size);
+  height: calc(var(--guide-size) * 5 / 4);
+  cursor: grab;
+  touch-action: none;
+  will-change: transform;
+}
+
+body:not([data-nocursor]) .guide__stage:active {
+  cursor: grabbing;
+}
+
+.guide__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 12px 22px rgba(0, 0, 0, .5));
+}
+
+/* ------------------------------------------------------- small screens */
+
+@media (max-width:700px) {
+  .guide {
+    --guide-size: 96px;
+    right: 14px;
+    bottom: 14px;
+    gap: 8px;
+  }
+  .guide__bubble {
+    max-width: min(230px, calc(100vw - 40px));
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  .guide__bubble-text {
+    top: 10px;
+    left: 12px;
+    right: 12px;
+  }
+  .guide__toggle {
+    min-height: 34px;
+  }
+}
+
+/* ------------------------------------------- static avatar / no motion */
+
+@media (prefers-reduced-motion:reduce) {
+  .guide__bubble,
+  .guide__stage,
+  .guide__toggle {
+    transition: none;
+  }
+}
+
+html[data-motion="off"] .guide__bubble,
+html[data-motion="off"] .guide__stage,
+html[data-motion="off"] .guide__toggle {
+  transition: none;
+}
+
+@media print {
+  .guide {
+    display: none !important;
+  }
+}
+
+/* marker: guide-avatar END */

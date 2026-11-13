@@ -57,6 +57,34 @@
       heroLine: 'I build CRMs, billing software and Shopify stores that businesses run on.'
     },
 
+    /* guide avatar (js/avatar.js) — every bubble line lives here, the
+       script holds no copy of its own. lines.* are keyed by trigger
+       (hero / returning / work / statement / services / footer / idle /
+       email / copied); projects[] is keyed by case-page slug and falls
+       back to the generic work line when a project has no line yet. */
+    avatar: {
+      image: 'assets/avatar/guide.png',
+      email: 'ragulthedeveloper@gmail.com',
+      lines: {
+        hero: 'Hi, I’m Ragul. Stick around and I’ll walk you through what I build.',
+        returning: 'Back again? Pick up where you left off.',
+        work: 'Stores, CRMs and billing software. Take a look.',
+        statement: 'Dashboards for every role. Content your team can publish themselves.',
+        services: 'Websites, Shopify stores, web apps and UI/UX design. That’s what I do.',
+        footer: 'Write to me anytime. Click and the email is copied.',
+        email: 'Write to me anytime. Click and the email is copied.',
+        copied: 'Copied. I’ll be waiting.',
+        idle: 'You can drag me around.'
+      },
+      projects: {
+        theworldofnerds: 'TWON is a Shopify store for anime and pop-culture collectibles.',
+        evarrah: 'Evarrah is a Shopify store.',
+        opalline: 'Opalline is a Shopify store plus billing software.',
+        v4startup: 'V4 Startup is a complete CRM with separate dashboards for admin, employees and clients.',
+        voiceofjagadguru: 'Voice of Jagadguru is a complete website with a CMS the team uses to upload content themselves.'
+      }
+    },
+
     /* short intro line under each new page's title */
     intros: {
       skills: 'Languages, frameworks and tools I use day to day, grouped by area.',
@@ -84,10 +112,10 @@
       {
         slug: 'theworldofnerds', name: 'The World of Nerds',
         site: 'theworldofnerds.com', url: 'https://theworldofnerds.com',
-        type: 'E-commerce', listType: 'E-commerce', platform: 'Shopify',
+        type: 'Shopify store', listType: 'Shopify store', platform: '',
         employer: '',
         year: 'TODO', role: 'TODO', client: 'TODO',
-        desc: 'Anime and pop-culture collectibles store',
+        desc: 'Shopify store for anime and pop-culture collectibles',
         altDesktop: 'The World of Nerds anime collectibles store on desktop',
         altMobile: 'The World of Nerds anime collectibles store on mobile'
       },
@@ -115,10 +143,11 @@
       {
         slug: 'anichamboutique', name: 'Anicham Boutique',
         site: 'anichamboutique.com', url: 'https://anichamboutique.com',
-        type: 'E-commerce', listType: 'E-commerce', platform: 'Shopify',
+        type: 'E-commerce website', listType: 'E-commerce website',
+        platform: 'HTML · CSS · JS · React · MySQL',
         employer: '',
         year: 'TODO', role: 'TODO', client: 'TODO',
-        desc: 'E-commerce with custom CMS',
+        desc: 'E-commerce website with a custom CMS, built in HTML, CSS, JS, React and MySQL',
         altDesktop: 'Anicham Boutique women’s ethnic wear store on desktop',
         altMobile: 'Anicham Boutique women’s ethnic wear store on mobile'
       },
@@ -179,7 +208,7 @@
     about: {
       lead: 'I’m Ragul, a full-stack and Shopify developer. I build the whole thing: the database, the back end, the dashboards, the storefront and the pages people actually see. TODO: review',
       paras: [
-        'At Huemind, since August 2026, I build Shopify stores and Opalline, a billing software. Before that, at Neoera Infotech from July 2025 to April 2026, I built business platforms: Rupnidhi (POS and GST billing), Workack (CRM, HR and Sales dashboard), an e-commerce platform with custom CMS for Anicham Boutique, and a Blog CMS syndicating content across 3 websites. TODO: review',
+        'At Huemind, since August 2026, I build Shopify stores and Opalline, a billing software. Before that, at Neoera Infotech from July 2025 to April 2026, I built business platforms: Rupnidhi (POS and GST billing), Workack (CRM, HR and Sales dashboard), an e-commerce website with a custom CMS for Anicham Boutique, and a Blog CMS syndicating content across 3 websites. TODO: review',
         'I’ve also built a complete CRM with separate dashboards for admins, employees and clients, and a complete website with a CMS so the team publishes content themselves. Design is part of the job, but only part of it. TODO: review'
       ],
       toolkit: ['React.js', 'TypeScript', 'JavaScript', 'Node.js', 'PHP', 'Shopify',
@@ -262,7 +291,7 @@
           org: 'Neoera Infotech',
           duties: [
             'Delivered 15+ production full-stack web projects for clients, including backend development, database design, hosting and deployment.',
-            'Engineered Rupnidhi (POS and GST billing), Workack (CRM, HR and Sales dashboard), an e-commerce platform with custom CMS for Anicham Boutique, and a Blog CMS syndicating content across 3 websites.',
+            'Engineered Rupnidhi (POS and GST billing), Workack (CRM, HR and Sales dashboard), an e-commerce website with a custom CMS for Anicham Boutique, and a Blog CMS syndicating content across 3 websites.',
             'Built secure admin backends for Voice of Jagadguru and Divasprik, an Attendance Portal, V4Startup with a PSG variant, and responsive brand websites for Swarnalagna and Virmodello.'
           ],
           stack: 'TODO'
@@ -309,13 +338,13 @@
        site.showTodos is false). verifyUrl: leave '' — the verify link
        stays hidden until set. image: leave '' — a 4:3 gradient
        placeholder shows; drop files in assets/img/certs/ and set e.g.
-       image: 'assets/img/certs/ai-agent-databricks.png'. */
+       image: asset('assets/img/certs/ai-agent-databricks.png'). */
     certificates: [
-      { title: 'AI Agent Fundamentals', issuer: 'Databricks', date: 'TODO', credentialId: 'TODO', verifyUrl: '', image: '' },
-      { title: 'Agentic AI', issuer: 'agentacademy.ai', date: 'TODO', credentialId: 'TODO', verifyUrl: '', image: '' },
-      { title: 'AWS Cloud Quest', issuer: 'AWS', date: 'TODO', credentialId: 'TODO', verifyUrl: '', image: '' },
-      { title: 'Python', issuer: 'IIT Bombay', date: 'TODO', credentialId: 'TODO', verifyUrl: '', image: '' },
-      { title: 'Java', issuer: 'NPTEL', date: 'TODO', credentialId: 'TODO', verifyUrl: '', image: '' },
+      { title: 'AI Agent Fundamentals', issuer: 'Databricks', date: '22 Feb 2026', credentialId: '', verifyUrl: '', image: asset('assets/img/certs/Databricks - Generic_ragul_1.jpg') },
+      { title: 'Understanding Agentic AI', issuer: 'agentacademy.ai', date: '22 Feb 2026', credentialId: '699b3252884316d9bf08427c', verifyUrl: '', image: asset('assets/img/certs/certificate-understanding-agentic-ai-ragul_1.jpg') },
+      { title: 'AWS Cloud Quest: Cloud Practitioner', issuer: 'AWS', date: 'TODO', credentialId: '', verifyUrl: 'https://www.credly.com/badges/e374f9d0-ac86-40d0-83b2-cc21091de55f/public_url', image: asset('assets/img/certs/aws-cloud-quest-cloud-practitioner.png') },
+      { title: 'Python 3.4.3 Training', issuer: 'IIT Bombay', date: '12 Dec 2024', credentialId: '', verifyUrl: '', image: asset('assets/img/certs/1000273208.jpg') },
+      { title: 'Programming in Java', issuer: 'NPTEL', date: 'Jul – Oct 2024', credentialId: 'NPTEL24CS105S661100142', verifyUrl: '', image: asset('assets/img/certs/nptel-programming-in-java.jpg') },
       { title: 'C Programming', issuer: 'CSC', date: 'TODO', credentialId: 'TODO', verifyUrl: '', image: '' }
     ],
 
