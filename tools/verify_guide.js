@@ -93,6 +93,7 @@ async function checkBasics(page, rel, vp, failures) {
       bodyScroll: document.body.scrollWidth - window.innerWidth,
       ariaGuide: g ? g.getAttribute('aria-hidden') : null,
       ariaStage: stage ? stage.getAttribute('aria-hidden') : null,
+      controls: bubble ? bubble.getAttribute('data-controls') : null,
       pointerNone: g ? getComputedStyle(g).pointerEvents === 'none' : null,
       stagePointer: stage ? getComputedStyle(stage).pointerEvents : null,
       closeFocusable: close ? close.tagName === 'BUTTON' : null,
@@ -112,7 +113,12 @@ async function checkBasics(page, rel, vp, failures) {
   if (!m.hasGuide) { fail(failures, rel, vp.name, 'guide markup missing'); return; }
   if (m.hScroll > 1) fail(failures, rel, vp.name, 'horizontal scroll', `+${m.hScroll}px`);
   if (m.bodyScroll > 1) fail(failures, rel, vp.name, 'body horizontal scroll', `+${m.bodyScroll}px`);
-  if (m.ariaGuide !== 'true') fail(failures, rel, vp.name, 'guide aria-hidden', String(m.ariaGuide));
+  /* the guide is aria-hidden unless it is offering controls (the offer
+     row / the tour) — those must be exposed to be reachable at all */
+  if (!(m.ariaGuide === 'true' || (m.ariaGuide === null && m.controls))) {
+    fail(failures, rel, vp.name, 'guide aria-hidden',
+         String(m.ariaGuide) + ' controls=' + String(m.controls));
+  }
   if (m.ariaStage !== 'true') fail(failures, rel, vp.name, 'stage aria-hidden', String(m.ariaStage));
   if (m.pointerNone !== true) fail(failures, rel, vp.name, 'container pointer-events', m.pointerNone);
   if (m.stagePointer !== 'auto') fail(failures, rel, vp.name, 'stage pointer-events', m.stagePointer);
@@ -138,6 +144,9 @@ async function checkRect(page, rel, vp, failures, label) {
     if (cs.visibility === 'hidden' || cs.display === 'none') return { hidden: true };
     const stage = document.querySelector('.guide__stage');
     const bubble = document.querySelector('.guide__bubble');
+    /* the phone bottom sheet is a panel: it may sit over page controls
+       (it dismisses itself), but the header must still stay clear */
+    const sheetMode = guide.hasAttribute('data-sheet');
     const bcs = bubble ? getComputedStyle(bubble) : null;
     const bubbleOpen = !!(bubble && bubble.hasAttribute('data-open') && parseFloat(bcs.opacity) > 0.05);
     const rects = [];
@@ -167,7 +176,9 @@ async function checkRect(page, rel, vp, failures, label) {
         /* the header must never be intersected at all */
         for (const rr of rects) if (overlap(rr.r, er)) hits.push(who + '×' + rr.name);
       } else {
-        /* links/buttons/inputs: their clickable centre must stay clear */
+        /* links/buttons/inputs: their clickable centre must stay clear
+           (except under the phone sheet, which is the point of it) */
+        if (sheetMode) continue;
         const cx = er.left + er.width / 2, cy = er.top + er.height / 2;
         if (cy <= 0 || cy >= window.innerHeight) continue;
         for (const rr of rects) if (ptIn(rr.r, cx, cy)) hits.push(who + ' centre×' + rr.name);
@@ -186,15 +197,43 @@ async function checkRect(page, rel, vp, failures, label) {
 }
 
 /* ----------------------------------------------------------- zones ---- */
-/* viewBox points for each PASS 1 zone, mapped through the stage box */
+/* viewBox points for each zone, mapped through the stage box with the
+   same "meet" maths the page uses (the viewBox is cropped to the
+   artwork, so a raw /200 x /220 mapping no longer lands) */
 
 const ZONES = [
-  { zone: 'nose', vx: 100, vy: 117, state: 'cough' },
-  { zone: 'body', vx: 100, vy: 200, state: 'giggle' },
-  { zone: 'head', vx: 70, vy: 135, state: 'pat' },
-  { zone: 'hair', vx: 100, vy: 60, state: 'pat' },
-  { zone: 'eyes', vx: 84, vy: 106, state: 'flinch' }   /* left eye, clear of the nose */
+  { zone: 'nose', vx: 100, vy: 117, state: 'cough', group: 'nose', key: 'cough' },
+  { zone: 'body', vx: 100, vy: 200, state: 'giggle', group: 'body', key: 'giggle' },
+  { zone: 'head', vx: 70, vy: 135, state: 'pat', group: 'head', key: 'pat' },
+  { zone: 'hair', vx: 100, vy: 60, state: 'pat', group: 'head', key: 'pat' },
+  { zone: 'eyes', vx: 84, vy: 106, state: 'flinch', group: 'eyes', key: 'flinch' }  /* left eye, clear of the nose */
 ];
+
+async function vbPoint(page, vx, vy) {
+  const b = await page.locator('.guide__stage').boundingBox();
+  if (!b) return null;
+  const vb = await page.evaluate(() => {
+    const s = document.querySelector('#av');
+    const v = s.viewBox.baseVal;
+    return { x: v.x, y: v.y, w: v.width, h: v.height };
+  });
+  const scale = Math.min(b.width / vb.w, b.height / vb.h);
+  const offX = (b.width - vb.w * scale) / 2;
+  const offY = (b.height - vb.h * scale) / 2;
+  /* side=left mirrors the whole drawing inside the stage box */
+  const side = await page.evaluate(() => document.querySelector('#guide').getAttribute('data-side'));
+  let px = offX + (vx - vb.x) * scale;
+  if (side === 'left') px = b.width - px;
+  return { x: b.x + px, y: b.y + offY + (vy - vb.y) * scale };
+}
+
+async function visibleCaption(page) {
+  return page.evaluate(() => {
+    const b = document.querySelector('.guide__bubble');
+    const t = document.querySelector('.guide__bubble-text');
+    return b && b.hasAttribute('data-open') && t ? t.textContent : '';
+  });
+}
 
 async function checkZones(browser, failures) {
   const rel = 'index.html';
@@ -212,12 +251,11 @@ async function checkZones(browser, failures) {
 
   async function clickAt(vx, vy) {
     /* re-measure each time: the avoidance keeps nudging the cluster a few px */
-    const b = await page.locator('.guide__stage').boundingBox();
-    const x = b.x + (vx / 200) * b.width;
-    const y = b.y + (vy / 220) * b.height;
-    await page.mouse.move(x, y);
+    const p = await vbPoint(page, vx, vy);
+    if (!p) return;
+    await page.mouse.move(p.x, p.y);
     await page.waitForTimeout(60);
-    await page.mouse.click(x, y);
+    await page.mouse.click(p.x, p.y);
   }
 
   for (const z of ZONES) {
@@ -226,6 +264,22 @@ async function checkZones(browser, failures) {
     const st = await page.evaluate(() => document.querySelector('#guide').getAttribute('data-state'));
     if (st !== z.state) {
       fail(failures, rel, vp.name, `zone ${z.zone} → state`, `got "${st}" want "${z.state}"`);
+    }
+    /* E4: assert the caption the visitor can actually read, not just
+       the data-state attribute — it must be one of data.js's lines */
+    const exp = await page.evaluate((zz) => {
+      const av = ((window.PORTFOLIO || {}).avatar || {});
+      const g = (av.reactions || {})[zz.group] || {};
+      return g[zz.key] || [];
+    }, z);
+    let vis = '';
+    for (let i = 0; i < 40 && !exp.includes(vis); i++) {
+      await page.waitForTimeout(150);
+      vis = await visibleCaption(page);
+    }
+    if (!exp.includes(vis)) {
+      fail(failures, rel, vp.name, `zone ${z.zone} caption`,
+           `got "${vis}" want one of ${JSON.stringify(exp)}`);
     }
     /* return to idle */
     const wait = z.state === 'cough' ? 900 : z.state === 'pat' ? 800 : z.state === 'flinch' ? 550 : 900;
@@ -293,6 +347,107 @@ async function checkAnchors(browser, failures) {
   console.log('');
 }
 
+/* ---------------------------------------------------- placement (E2) -- */
+/* the hero anchor must clear RAGUL, KUMAR, the meta row, the nav and
+   the button at every size; where it cannot, it has to fall back to
+   hiding rather than covering the words. Every fallback size is
+   printed, and the rendered figure size is reported for the crop. */
+
+const PLACE_VPS = [
+  { name: '1366x768', width: 1366, height: 768 },
+  { name: '1536x864', width: 1536, height: 864 },
+  { name: '1440x900', width: 1440, height: 900 },
+  { name: '1920x1080', width: 1920, height: 1080 },
+  { name: '2560x1440', width: 2560, height: 1440 },
+  { name: '390x844', width: 390, height: 844 },
+  { name: '360x740', width: 360, height: 740 },
+  { name: '768x1024', width: 768, height: 1024 }
+];
+
+async function checkPlacement(browser, failures) {
+  const rel = 'index.html';
+  console.log('placement (hero clearance at 8 sizes):');
+  for (const vp of PLACE_VPS) {
+    const { ctx, page, errors } = await openPage(browser, rel, vp, {});
+    await page.waitForTimeout(400);
+    const m = await page.evaluate(() => {
+      const g = document.querySelector('#guide');
+      const stage = document.querySelector('.guide__stage');
+      const svg = document.querySelector('#av');
+      const ink = (sel) => {
+        const el = document.querySelector(sel);
+        if (!el) return null;
+        const kids = [...el.querySelectorAll('.kinetic__letter')];
+        const list = kids.length ? kids : [el];
+        let l = Infinity, r = -Infinity, t = Infinity, b = -Infinity;
+        for (const k of list) {
+          const q = k.getBoundingClientRect();
+          if (!q.width && !q.height) continue;
+          l = Math.min(l, q.left); r = Math.max(r, q.right);
+          t = Math.min(t, q.top); b = Math.max(b, q.bottom);
+        }
+        return l === Infinity ? null : { l, r, t, b };
+      };
+      const box = (sel) => {
+        const e = document.querySelector(sel);
+        if (!e) return null;
+        const q = e.getBoundingClientRect();
+        return { l: q.left, r: q.right, t: q.top, b: q.bottom };
+      };
+      const sr = stage.getBoundingClientRect();
+      const v = svg.viewBox.baseVal;
+      const bb = svg.getBBox();
+      const scale = Math.min(sr.width / v.width, sr.height / v.height);
+      const offX = (sr.width - v.width * scale) / 2;
+      const offY = (sr.height - v.height * scale) / 2;
+      const fig = {
+        l: sr.left + offX + (bb.x - v.x) * scale,
+        t: sr.top + offY + (bb.y - v.y) * scale
+      };
+      fig.r = fig.l + bb.width * scale;
+      fig.b = fig.t + bb.height * scale;
+      const targets = {
+        RAGUL: ink('.hero__line'),
+        KUMAR: ink('.hero__line--second'),
+        meta: ink('.hero__top'),
+        nav: box('.header'),
+        button: box('.hero__button')
+      };
+      const hit = (a, c) => a && c && a.l < c.r && a.r > c.l && a.t < c.b && a.b > c.t;
+      const clashes = Object.keys(targets).filter((k) => hit(fig, targets[k]));
+      const cs = getComputedStyle(g);
+      return {
+        hidden: cs.visibility === 'hidden' || cs.display === 'none',
+        suppressed: g.getAttribute('data-suppressed'),
+        size: g.style.getPropertyValue('--guide-size-base'),
+        stage: { w: Math.round(sr.width), h: Math.round(sr.height) },
+        fig: { w: Math.round(fig.r - fig.l), h: Math.round(fig.b - fig.t),
+               l: Math.round(fig.l), t: Math.round(fig.t),
+               r: Math.round(fig.r), b: Math.round(fig.b) },
+        clashes
+      };
+    });
+    const tag = vp.name;
+    if (m.hidden) {
+      console.log(`  ${tag.padEnd(10)} HIDDEN (${m.suppressed})  size=${m.size}  figure=${m.fig.w}x${m.fig.h}`);
+      if (m.suppressed !== 'overlap' && m.suppressed !== 'blocked') {
+        fail(failures, rel, tag, 'placement hidden for the wrong reason', String(m.suppressed));
+      }
+    } else {
+      console.log(`  ${tag.padEnd(10)} size=${m.size}  stage=${m.stage.w}x${m.stage.h}  ` +
+                  `figure=${m.fig.w}x${m.fig.h} at ${m.fig.l},${m.fig.t}..${m.fig.r},${m.fig.b}`);
+      if (m.clashes.length) fail(failures, rel, tag, 'hero figure overlaps', m.clashes.join(', '));
+      if (m.fig.l < -1 || m.fig.r > vp.width + 1 || m.fig.t < -1 || m.fig.b > vp.height + 1) {
+        fail(failures, rel, tag, 'hero figure outside the viewport', JSON.stringify(m.fig));
+      }
+    }
+    if (errors.length) fail(failures, rel, tag, 'console errors', errors.join(' | '));
+    await ctx.close();
+    process.stdout.write('.');
+  }
+  console.log('');
+}
+
 /* ---------------------------------------------------- reduced motion --- */
 
 async function checkReduced(browser, failures) {
@@ -324,18 +479,45 @@ async function checkReduced(browser, failures) {
   const t2 = await page.evaluate(() => document.querySelector('#guide').style.transform);
   if (t1 !== t2) fail(failures, rel, vp.name, 'reduced: guide transform animates', `${t1} → ${t2}`);
 
-  /* a line must still appear (the bubble still works) */
+  /* E3 + "reduced motion gives instant text": on a phone the held
+     greeting is released by a tap and must land complete in one step,
+     and any line over TH.mobileMax must be suppressed instead */
+  const p = await vbPoint(page, 100, 133);          /* mouth zone: no reaction */
+  if (p) {
+    await page.mouse.click(p.x, p.y);
+    await page.waitForTimeout(150);
+    const t0 = await visibleCaption(page);
+    if (!t0) fail(failures, rel, vp.name, 'reduced: no line after tap');
+    else if (t0.length > 30) fail(failures, rel, vp.name, 'reduced: phone line over 30 chars', `${t0.length}: ${t0}`);
+    await page.waitForTimeout(500);
+    const t1 = await visibleCaption(page);
+    if (t1 !== t0) fail(failures, rel, vp.name, 'reduced: caption not instant',
+                         `${JSON.stringify(t0)} -> ${JSON.stringify(t1)}`);
+  } else fail(failures, rel, vp.name, 'reduced: stage has no box');
+
+  /* at 390 a section line now lives in the phone sheet — the bubble
+     beside the avatar keeps the 30-character rule */
   await page.evaluate(() => document.querySelector('.selected-work').scrollIntoView({ block: 'center' }));
-  let line = '';
-  for (let i = 0; i < 25 && !line; i++) {
-    await page.waitForTimeout(200);
-    line = await page.evaluate(() => {
-      const b = document.querySelector('.guide__bubble');
-      const t = document.querySelector('.guide__bubble-text');
-      return b && b.hasAttribute('data-open') && t ? t.textContent : '';
-    });
+  await page.waitForTimeout(1600);
+  const sec = await page.evaluate(() => {
+    const g = document.querySelector('#guide');
+    const b = document.querySelector('.guide__bubble');
+    const t = document.querySelector('.guide__bubble-text');
+    return {
+      sheet: g.hasAttribute('data-sheet'),
+      text: t ? t.textContent : '',
+      open: !!(b && b.hasAttribute('data-open') && !b.hasAttribute('data-hold'))
+    };
+  });
+  const wantSec = await page.evaluate(() => window.PORTFOLIO.avatar.lines.work);
+  if (sec.sheet) {
+    if (sec.text !== wantSec) {
+      fail(failures, rel, vp.name, 'reduced: sheet section line',
+           `got "${sec.text}" want "${wantSec}"`);
+    }
+  } else if (sec.open && sec.text.length > 30) {
+    fail(failures, rel, vp.name, 'reduced: long bubble line on phone', `${sec.text.length}: ${sec.text}`);
   }
-  if (!line) fail(failures, rel, vp.name, 'reduced: no section line', JSON.stringify(line));
   if (errors.length) fail(failures, rel, vp.name, 'reduced console errors', errors.join(' | '));
   await ctx.close();
 }
@@ -353,12 +535,24 @@ async function checkCoarse(browser, failures) {
   if (!box) {
     fail(failures, rel, vp.name, 'touch: stage has no box');
   } else {
-    const x = box.x + (100 / 200) * box.width;
-    const y = box.y + (200 / 220) * box.height;
-    await page.touchscreen.tap(x, y);
+    const p = await vbPoint(page, 100, 200);
+    await page.touchscreen.tap(p.x, p.y);
     await page.waitForTimeout(200);
     const st = await page.evaluate(() => document.querySelector('#guide').getAttribute('data-state'));
     if (st !== 'giggle') fail(failures, rel, vp.name, 'touch tap → giggle', `got "${st}"`);
+    /* the caption must be readable text, not just a state flag */
+    const exp = await page.evaluate(() => {
+      const av = ((window.PORTFOLIO || {}).avatar || {});
+      return (((av.reactions || {}).body || {}).giggle) || [];
+    });
+    let vis = '';
+    for (let i = 0; i < 40 && !exp.includes(vis); i++) {
+      await page.waitForTimeout(150);
+      vis = await visibleCaption(page);
+    }
+    if (!exp.includes(vis)) {
+      fail(failures, rel, vp.name, 'touch giggle caption', `got "${vis}"`);
+    }
   }
 
   /* the page must still scroll (touch-action not locked) */
@@ -474,6 +668,8 @@ async function main() {
   await checkZones(browser, failures);
   console.log('anchors…');
   await checkAnchors(browser, failures);
+  console.log('placement…');
+  await checkPlacement(browser, failures);
   console.log('reduced…');
   await checkReduced(browser, failures);
   console.log('coarse…');

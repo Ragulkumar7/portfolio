@@ -64,6 +64,8 @@
   function initLenis() {
     if (lenis || typeof window.Lenis !== 'function' || !canMotion) return;
     try { lenis = new window.Lenis({ autoRaf: false }); } catch (e) { lenis = null; }
+    /* shared so the guide's tour can scroll with the site's own engine */
+    if (lenis) window.lenis = lenis;
   }
 
   function tick(now) {

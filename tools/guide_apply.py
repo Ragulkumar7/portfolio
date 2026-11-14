@@ -34,13 +34,19 @@ CSS_FILE = os.path.join(ROOT, 'tools', 'guide_avatar.css')
 CSS_START = 'marker: guide-avatar START'
 CSS_END = 'marker: guide-avatar END'
 
-# footer toggle: planted once before the Back-to-top button, then only
-# rewritten between the markers on every later run
+# footer controls: planted once before the Back-to-top button, then only
+# rewritten between the markers on every later run. The tour link points
+# at this page's index.html (avatar.js starts it on the home page and
+# carries the intent over from anywhere else).
 FSTART = '<!-- guide:footer:start -->'
 FEND = '<!-- guide:footer:end -->'
 FANCHOR = re.compile(r'[ \t]*<button[^>]*data-back-to-top[^>]*>')
-FBLOCK = ('<button type="button" class="footer__guide" data-guide-toggle="" '
-          'aria-pressed="true" data-cursor="Guide">Guide: on</button>')
+FBLOCK = ('<a class="footer__tour" data-tour-link data-cursor="Tour" '
+          'href="{prefix}index.html">Take the tour</a>'
+          '<button type="button" class="footer__guide" data-guide-toggle="" '
+          'aria-pressed="true" data-cursor="Guide">Guide: on</button>'
+          '<button type="button" class="footer__sound" data-sound-toggle '
+          'aria-pressed="false" data-cursor="Sound">Sound: off</button>')
 
 
 def io_open(path, mode='r'):
@@ -74,9 +80,10 @@ def transform_page(text, prefix, rel):
     return new, 'marked'
 
 
-def transform_footer(text, rel):
-    """Plant/refresh the footer Guide toggle between marker guards."""
+def transform_footer(text, rel, prefix=''):
+    """Plant/refresh the footer tour link + Guide/Sound toggles."""
     eol = '\r\n' if '\r\n' in text else '\n'
+    block = FSTART + FBLOCK.format(prefix=prefix) + FEND
     has_s, has_e = FSTART in text, FEND in text
     if has_s or has_e:
         if not (has_s and has_e):
@@ -85,15 +92,11 @@ def transform_footer(text, rel):
         j = text.index(FEND) + len(FEND)
         if i > j:
             raise SystemExit('%s: footer markers out of order' % rel)
-        block = FSTART + eol + FBLOCK + eol + FEND
-        # keep the block inline (no line breaks) for a compact footer row
-        block = FSTART + FBLOCK + FEND
         new = text[:i] + block + text[j:]
         return new, ('ok' if new == text else 'refreshed')
     m = FANCHOR.search(text)
     if not m:
         raise SystemExit('%s: footer back-to-top anchor not found' % rel)
-    block = FSTART + FBLOCK + FEND
     # plant immediately before the Back-to-top button
     new = text[:m.start()] + block + eol + text[m.start():]
     return new, 'marked'
@@ -153,7 +156,7 @@ def main():
             new, status = transform_page(text, prefix, rel)
             if status != 'ok':
                 changed += 1
-            new2, status2 = transform_footer(new, rel)
+            new2, status2 = transform_footer(new, rel, prefix)
             if status2 != 'ok':
                 changed += 1
             if not check and (status != 'ok' or status2 != 'ok'):

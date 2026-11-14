@@ -5878,6 +5878,115 @@ html:not([data-todos-on]) [data-todo] {
   color: #2f58c8;
 }
 
+/* ------------------------------------------ bubble controls (tour) --- */
+/* the offer row (first visit) and the tour row sit under the caption,
+   in the bubble's own flow; both stay out of the way until wanted */
+
+.guide__offer,
+.guide__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.guide__offer[hidden],
+.guide__controls[hidden],
+.guide__paused[hidden] {
+  display: none;
+}
+
+.guide__offer button,
+.guide__controls button {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: #111010;
+  background: 0 0;
+  border: 1px solid #11101055;
+  border-radius: 6px;
+  padding: 5px 6px;
+  cursor: pointer;
+}
+
+.guide__offer button:hover,
+.guide__offer button:focus-visible,
+.guide__controls button:hover,
+.guide__controls button:focus-visible {
+  border-color: #2f58c8;
+  color: #2f58c8;
+  outline: none;
+}
+
+.guide__count,
+.guide__paused {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.guide__count { color: #111010aa; }
+.guide__paused { color: #2f58c8; }
+
+/* the speaker: one copy parked above the bubble's outer corner, one
+   inside the tour controls. Off = waves hidden, slash shown. */
+.guide__sound {
+  position: absolute;
+  top: -30px;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 0;
+  border: 1px solid var(--color-outline);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-label);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: color .2s var(--ease-out), border-color .2s var(--ease-out),
+    opacity .2s var(--ease-out);
+}
+
+.guide[data-side="right"] .guide__sound--bubble { left: 0; }
+.guide[data-side="left"] .guide__sound--bubble { right: 0; }
+
+/* the tour copy is an ordinary item of the controls row */
+.guide__controls .guide__sound {
+  position: static;
+  width: 22px;
+  height: 22px;
+  top: auto;
+  left: auto;
+  right: auto;
+}
+
+.guide__sound:hover,
+.guide__sound:focus-visible {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+.guide__sound[data-sound="off"] { opacity: .55; }
+
+.guide__sound .sound-slash { display: none; }
+.guide__sound[data-sound="off"] .sound-waves { display: none; }
+.guide__sound[data-sound="off"] .sound-slash { display: block; }
+
+/* the corner copy belongs to the bubble — no bubble, no speaker — and
+   the running tour shows the one in its own row instead */
+.guide__bubble:not([data-open]) .guide__sound--bubble { display: none; }
+.guide[data-tour] .guide__sound--bubble,
+.guide[data-sheet] .guide__sound--bubble { display: none; }
+
 /* dithered offset shadow — a dot pattern, no real shadow */
 .guide__bubble::after {
   content: "";
@@ -5918,7 +6027,11 @@ html:not([data-todos-on]) [data-todo] {
   box-sizing: border-box;
   pointer-events: auto;
   width: var(--guide-size);
-  height: calc(var(--guide-size) * 1.1);        /* viewBox 200 x 220 */
+  height: calc(var(--guide-size) * 1.1);
+  /* the viewBox is cropped to the artwork bbox + 6 units (136 x 190);
+     preserveAspectRatio meets it inside this box, so the drawing fills
+     the height and centres on the wider axis. viewBoxMap() does the
+     same maths in JS, so the two can never disagree. */
   flex: none;
   user-select: none;
   -webkit-user-select: none;
@@ -5976,6 +6089,17 @@ html:not([data-todos-on]) [data-todo] {
 #av-mouth .m-smile {
   opacity: 1;
 }
+
+/* talking: while a line is spoken the mouth alternates m-open with the
+   closed shape — m-grin on laughs — and settles back on smile at the
+   end (the script removes data-mouth). These rules sit BEFORE the
+   data-state ones below, so a reaction (cough, giggle, …) keeps its
+   own mouth for as long as it plays. Reduced motion never sets the
+   attribute, so the mouth stays static. */
+.guide[data-mouth="open"] #av-mouth .m-smile { opacity: 0; }
+.guide[data-mouth="open"] #av-mouth .m-open { opacity: 1; }
+.guide[data-mouth="grin"] #av-mouth .m-smile { opacity: 0; }
+.guide[data-mouth="grin"] #av-mouth .m-grin { opacity: 1; }
 
 /* eyes + blush defaults */
 #av-eyes-open { opacity: 1; }
@@ -6101,9 +6225,11 @@ html:not([data-todos-on]) [data-todo] {
   animation: av-hop var(--travel-ms, 900ms) steps(11, end) both;
 }
 
-/* ------------------------------------------------------- footer on/off */
+/* ----------------------------------- footer guide / sound / tour ----- */
 
-.footer__guide {
+.footer__guide,
+.footer__sound,
+.footer__tour {
   font-family: var(--font-mono);
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -6113,15 +6239,21 @@ html:not([data-todos-on]) [data-todo] {
   padding: 0;
   cursor: pointer;
   font-size: 12px;
+  text-decoration: none;
 }
 
 .footer__guide:hover,
-.footer__guide:focus-visible {
+.footer__guide:focus-visible,
+.footer__sound:hover,
+.footer__sound:focus-visible,
+.footer__tour:hover,
+.footer__tour:focus-visible {
   color: var(--color-accent);
   outline: none;
 }
 
-.footer__guide[aria-pressed="false"] {
+.footer__guide[aria-pressed="false"],
+.footer__sound[aria-pressed="false"] {
   opacity: .6;
 }
 
@@ -6142,6 +6274,95 @@ html:not([data-todos-on]) [data-todo] {
   .guide__close { width: 34px; height: 34px; }
 }
 
+/* ------------------------------------------ bottom sheet (phones) ---- */
+/* on a phone the cluster becomes a bottom sheet — used by the tour and,
+   at <=600px, by the page narration and section lines. Full width with
+   safe-area padding, the 70px avatar on its left, the caption beside it.
+   The script positions the guide inline for every other anchor, so this
+   pins it with !important, and z-index 92 keeps it under the header
+   (100) — it can never cover it. */
+
+@media (max-width: 600px) {
+  .guide[data-tour],
+  .guide[data-sheet] {
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    bottom: 0 !important;
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+    flex-direction: row-reverse;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-outline);
+    transform: none !important;
+    z-index: 92;
+    /* the 70px avatar, without touching --guide-size-base (the anchor
+       contract the rest of the page measures) */
+    --guide-size: 70px;
+  }
+
+  /* the narration sheet dismisses when it is tapped */
+  .guide[data-sheet] { cursor: pointer; }
+
+  .guide[data-tour] .guide__bubble,
+  .guide[data-sheet] .guide__bubble {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+    padding: 0;
+    background: 0 0;
+  }
+
+  .guide[data-tour] .guide__bubble::after,
+  .guide[data-sheet] .guide__bubble::after,
+  .guide[data-tour] .guide__tail,
+  .guide[data-sheet] .guide__tail {
+    display: none;
+  }
+
+  .guide[data-tour] .guide__bubble-text,
+  .guide[data-sheet] .guide__bubble-text {
+    top: 0;
+    left: 0;
+    right: 0;
+    color: var(--color-text);
+  }
+
+  .guide[data-tour] .guide__offer,
+  .guide[data-tour] .guide__controls {
+    margin-top: 8px;
+    color: var(--color-text);
+  }
+
+  /* the sheet is dark — the controls swap the paper bubble's ink for
+     the page palette, or they would be dark-on-dark */
+  .guide[data-tour] .guide__offer button,
+  .guide[data-tour] .guide__controls button {
+    color: var(--color-text);
+    border-color: var(--color-outline);
+  }
+
+  .guide[data-tour] .guide__offer button:hover,
+  .guide[data-tour] .guide__offer button:focus-visible,
+  .guide[data-tour] .guide__controls button:hover,
+  .guide[data-tour] .guide__controls button:focus-visible {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+  }
+
+  .guide[data-tour] .guide__count { color: var(--color-label); }
+  .guide[data-tour] .guide__paused { color: var(--color-accent); }
+  .guide[data-tour] .guide__sound {
+    background: transparent;
+    color: var(--color-label);
+  }
+}
+
 /* --------------------------------------------- static avatar / no motion */
 
 @media (prefers-reduced-motion: reduce) {
@@ -6149,7 +6370,10 @@ html:not([data-todos-on]) [data-todo] {
   .guide__bubble,
   .guide__flip,
   .guide__close,
-  .footer__guide {
+  .guide__sound,
+  .footer__guide,
+  .footer__sound,
+  .footer__tour {
     transition: none;
   }
   .guide__stage[data-anim="hop"],

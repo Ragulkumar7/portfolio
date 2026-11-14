@@ -68,6 +68,11 @@
       email: 'ragulthedeveloper@gmail.com',
       accent: 'Ragul',                       /* the first line highlights this word */
 
+      /* sound: 'off' (text only) | 'blips' (Web Audio) | 'voice'
+         (speechSynthesis). Nothing audible is ever created before a
+         user gesture; the choice persists in localStorage. */
+      sound: 'off',
+
       /* elements the avatar must never sit on: if its box ever touches
          one of these the guide hides (the marquee sweeps the whole
          width while the page scrolls, so it can only be dodged by
@@ -77,6 +82,7 @@
       /* page + section lines */
       lines: {
         hero: 'Hi, I’m Ragul. Stick around and I’ll walk you through what I build.',
+        tourOffer: 'Hi, I’m Ragul. Want a quick tour?',
         returning: 'Back again? Pick up where you left off.',
         work: 'Stores, CRMs and billing software. Take a look.',
         statement: 'Dashboards for every role. Content your team can publish themselves.',
@@ -91,6 +97,51 @@
         footer: 'Write to me anytime. Click and the email is copied.',
         copied: 'Copied. I’ll be waiting.'
       },
+
+      /* phones (≤600px): a bubble line outside the tour must fit in 30
+         characters or it is suppressed — except these keys, which get
+         the short wording below (the greeting is mandatory) */
+      shortLines: {
+        hero: 'Hi, I’m Ragul. Quick tour?',
+        returning: 'Back again? Carry on.',
+        tourOffer: 'Hi, I’m Ragul. Want a tour?'
+      },
+
+      /* one line per page, spoken once after the avatar appears (D) */
+      pageLines: {
+        about: 'I’m a full-stack and Shopify developer. I’ve built CRMs, billing software and Shopify stores.',
+        experience: 'I’m at Huemind now, building Shopify stores and the Opalline billing software. Before that I was at Neoera Infotech, from July 2025 to April 2026.',
+        skills: 'My toolkit is React, TypeScript, Node.js, PHP and Shopify, with PostgreSQL, MySQL and MongoDB behind them.',
+        certificates: 'Six certifications, including AWS Cloud Quest and the Databricks AI agent fundamentals course.',
+        resume: 'Here’s my resume. Read it here, or download the PDF.',
+        github: 'These are my public repositories, fetched live from GitHub.',
+        contact: 'Write to me anytime. Click and the email is copied.',
+        services: 'Websites, Shopify stores, web apps and UI and UX. Pick one.'
+      },
+
+      /* the guided tour (C) — real selectors from the home markup */
+      tour: [
+        { id: 'hero', target: '.hero',
+          line: 'Hi, I’m Ragul, a full-stack and Shopify developer. Let me show you around. It takes about a minute.' },
+        { id: 'work', target: '.selected-work',
+          line: 'These are projects I’ve built: Shopify stores like The World of Nerds and Evarrah, and Opalline, a Shopify store with its own billing software.' },
+        { id: 'v4', target: 'a[href="work/v4startup.html"]',
+          line: 'For V4 Startup I built a complete CRM, with separate dashboards for admins, employees and clients.' },
+        { id: 'jagadguru', target: 'a[href="work/voiceofjagadguru.html"]',
+          line: 'Voice of Jagadguru is a complete website with a CMS, so the team uploads content themselves.' },
+        { id: 'statement', target: '.statement',
+          line: 'I build the whole thing, from the database to the storefront.' },
+        { id: 'services', target: '.service-tiles',
+          line: 'I take on websites, Shopify stores, full-stack web apps and dashboards, and UI and UX design.' },
+        { id: 'footer', target: '.footer',
+          line: 'That’s the tour. For my experience, skills, certificates and resume, use the menu. Or write to me: click my bubble and the email is copied.' }
+      ],
+
+      /* optional recorded narration: lineId → 'assets/audio/<id>.mp3'.
+         never created here; a missing/broken file falls back to the
+         active mode (off / blips / voice). */
+      audio: {},
+
 
       /* project commentary — facts only; slugs without a line fall back
          to “<title> — <type>” built from projects[] inside the script */
@@ -200,12 +251,24 @@
         flickMs: 600, chatterMs: 600, yawnMs: 1400, sleepMs: 0, wakeMs: 600,
         dizzyMs: 1200, holdMs: 450, pickupMs: 260,
         tickleMs: 400, tickleStopMs: 3000, tickleEndMs: 600,
-        hintMs: 8000, hideMs: 5000, typeMs: 26,
+        hintMs: 8000, hideMs: 5000,
         idleYawnMs: 25000, idleSleepMs: 50000,
         fastScrollMs: 1000, fastScrollPx: 900,
         eyePx: 4, headPx: 3, leanDeg: 4,
         avoidGap: 10,           /* clearance kept above controls/header */
-        avoidStep: 6            /* px per avoidance probe */
+        avoidStep: 6,           /* px per avoidance probe */
+
+        /* speech engine (B) — pace in characters/seconds, blip shape,
+           punctuation pauses, head bob and tour timings */
+        speechCps: 15,          /* mode "off": reading pace */
+        blipCps: 18,            /* mode "blips": letters per second */
+        blipMs: 40, blipLo: 380, blipHi: 640,
+        blipGain: 0.04, blipAttack: 8, masterGain: 0.25,
+        pauseMin: 120, pauseMax: 250,   /* pause after punctuation */
+        bobPx: 2,               /* head bob height per word */
+        tourAdvanceMs: 1000,    /* auto-advance after a step's line ends */
+        mobileMax: 30,          /* longest non-tour bubble line on phones */
+        narrateAfterMs: 350     /* page narration delay after appearing */
       }
     },
 
