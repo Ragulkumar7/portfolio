@@ -395,7 +395,7 @@
     about: {
       lead: 'I’m Ragul, a full-stack and Shopify developer. I build the whole thing: the database, the back end, the dashboards, the storefront and the pages people actually see. TODO: review',
       paras: [
-        'At Huemind, since August 2026, I build Shopify stores and Opalline, a billing software. Before that, at Neoera Infotech from July 2025 to April 2026, I built business platforms: Rupnidhi (POS and GST billing), Workack (CRM, HR and Sales dashboard), an e-commerce website with a custom CMS for Anicham Boutique, and a Blog CMS syndicating content across 3 websites. TODO: review',
+        'At Huemind, since June 2026, I build Shopify stores and Opalline, a billing software. Before that, at Neoera Infotech from July 2025 to April 2026, I built business platforms: Rupnidhi (POS and GST billing), Workack (CRM, HR and Sales dashboard), an e-commerce website with a custom CMS for Anicham Boutique, and a Blog CMS syndicating content across 3 websites. TODO: review',
         'I’ve also built a complete CRM with separate dashboards for admins, employees and clients, and a complete website with a CMS so the team publishes content themselves. Design is part of the job, but only part of it. TODO: review'
       ],
       toolkit: ['React.js', 'TypeScript', 'JavaScript', 'Node.js', 'PHP', 'Shopify',
@@ -457,13 +457,14 @@
       ] }
     ],
 
-    /* experience.html — current position first, then Neoera roles, then
-       current work. Dates are real; stack stays TODO until supplied. */
+    /* experience.html — current position first, then the Neoera role,
+       then current work. Two steps only. Dates are real; stack stays
+       TODO until supplied. */
     experience: {
       workTitle: 'Work history',
       roles: [
         {
-          label: 'Aug 2026 — Present',
+          label: 'Jun 2026 — Present',
           title: 'Full Stack & Shopify Developer',
           org: 'Huemind, Dharmapuri, Tamil Nadu',
           duties: [
@@ -473,22 +474,13 @@
           stack: 'TODO'
         },
         {
-          label: 'Sep 2025 — Apr 2026',
+          label: 'Jul 2025 — Apr 2026',
           title: 'Full-Stack Developer',
           org: 'Neoera Infotech',
           duties: [
             'Delivered 15+ production full-stack web projects for clients, including backend development, database design, hosting and deployment.',
-            'Engineered Rupnidhi (POS and GST billing), Workack (CRM, HR and Sales dashboard), an e-commerce website with a custom CMS for Anicham Boutique, and a Blog CMS syndicating content across 3 websites.',
+            'Engineered Rupnidhi (POS and GST billing), Workack (CRM, HR and Sales dashboard), an e-commerce platform with custom CMS for Anicham Boutique, and a Blog CMS syndicating content across 3 websites.',
             'Built secure admin backends for Voice of Jagadguru and Divasprik, an Attendance Portal, V4Startup with a PSG variant, and responsive brand websites for Swarnalagna and Virmodello.'
-          ],
-          stack: 'TODO'
-        },
-        {
-          label: 'Jul 2025 — Aug 2025',
-          title: 'Intern Developer',
-          org: 'Neoera Infotech',
-          duties: [
-            'Completed a 2-month project training in web designing and development, applying it to real-world problems in hosting and deployment.'
           ],
           stack: 'TODO'
         }

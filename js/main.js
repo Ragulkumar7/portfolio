@@ -1709,7 +1709,7 @@
       }, 120);
     }
 
-    /* intercept internal link clicks */
+    /* intercept same-origin link clicks */
     doc.addEventListener('click', function (e) {
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       var a = e.target.closest ? e.target.closest('a[href]') : null;

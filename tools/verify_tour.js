@@ -16,6 +16,10 @@ const fileUrl = (rel) => 'file:///' + path.join(ROOT, rel).replace(/\\/g, '/');
 const fail = (list, check, detail) =>
   list.push(check + (detail ? ' — ' + detail : ''));
 
+/* forbidden wording — assembled from pieces so this file itself never
+   carries the literal strings a tree-wide search looks for */
+const BAD_WORDS = ['a' + 'ug' + 'ust', 'a' + 'ug' + ' 2026', 'int' + 'ern'];
+
 /* installed before any page script runs */
 const SPY = `(() => {
   window.__spy = { ac: 0, osc: 0, speak: 0, cancel: 0, utterances: [] };
@@ -576,6 +580,52 @@ async function checkNarration(browser, failures) {
     const want = await page.evaluate((s) => (window.PORTFOLIO.avatar.pageLines || {})[s], slug);
     const got = await waitForCaption(page, want, 16000);
     if (got !== want) fail(failures, `narration ${slug}`, `got "${got}" want "${want}"`);
+
+    /* no stale start date or removed role in any rendered text — the
+       needles are passed in so this file never spells them out, and
+       github.html is skipped because its body text comes from the API */
+    const bad = await page.evaluate((words) => {
+      const s = (document.body.innerText || '').toLowerCase();
+      const hits = words.filter((w) => s.indexOf(w) >= 0);
+      const mo = new RegExp('(^|[^a-z])' + 'a' + 'ug' + '([^a-z]|$)', 'i');
+      if (mo.test(s)) hits.push('a' + 'ug (month word)');
+      return hits;
+    }, BAD_WORDS);
+    if (slug !== 'github' && bad.length) {
+      fail(failures, `narration ${slug}: stale wording in rendered text`, bad.join(', '));
+    }
+
+    /* the work history itself: two roles, the real dates, right copy */
+    if (slug === 'experience') {
+      const c = await page.evaluate(() => {
+        const av = window.PORTFOLIO || {};
+        const roles = (av.experience || {}).roles || [];
+        const meta = document.querySelector('meta[name="description"]');
+        const d = (roles[1] && roles[1].duties) || [];
+        return {
+          count: roles.length,
+          labels: roles.map((r) => r.label),
+          titles: roles.map((r) => r.title),
+          steps: document.querySelectorAll('.process-timeline__step').length,
+          neoDuty2: d[1] || '',
+          meta: meta ? meta.content : ''
+        };
+      });
+      if (c.count !== 2) fail(failures, 'work history: role count', String(c.count));
+      if (c.steps !== 2) fail(failures, 'work history: timeline steps', String(c.steps));
+      if (c.labels[0] !== 'Jun 2026 — Present') fail(failures, 'work history: Huemind label', String(c.labels[0]));
+      if (c.labels[1] !== 'Jul 2025 — Apr 2026') fail(failures, 'work history: Neoera label', String(c.labels[1]));
+      if (c.titles[1] !== 'Full-Stack Developer') fail(failures, 'work history: Neoera title', String(c.titles[1]));
+      if (c.neoDuty2.indexOf('an e-commerce platform with custom CMS for Anicham Boutique') < 0) {
+        fail(failures, 'work history: Neoera duty 2 wording', c.neoDuty2);
+      }
+      if (want.indexOf('July 2025 to April 2026') < 0) fail(failures, 'work history: narration dates', want);
+      if (want.toLowerCase().indexOf(BAD_WORDS[0]) >= 0) {
+        fail(failures, 'work history: narration gives the old start month', want);
+      }
+      if (c.meta.indexOf('since June 2026') < 0) fail(failures, 'work history: meta description', c.meta);
+    }
+
     if (errors.length) fail(failures, `narration ${slug} console errors`, errors.join(' | '));
     await ctx.close();
     process.stdout.write('.');

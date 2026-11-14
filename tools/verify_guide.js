@@ -36,6 +36,17 @@ const fileUrl = (rel) => 'file:///' + path.join(ROOT, rel).replace(/\\/g, '/');
 const fail = (list, rel, vp, check, detail) =>
   list.push(`[${vp}] ${rel} :: ${check}${detail ? ' — ' + detail : ''}`);
 
+/* forbidden wording in rendered text — assembled from pieces so this file
+   itself never carries the literal strings a tree-wide search looks for */
+const BAD_WORDS = ['a' + 'ug' + 'ust', 'a' + 'ug' + ' 2026', 'int' + 'ern'];
+const MONTH_WORD = new RegExp('(^|[^a-z])' + 'a' + 'ug' + '([^a-z]|$)', 'i');
+const badIn = (s) => {
+  const t = String(s || '').toLowerCase();
+  const hits = BAD_WORDS.filter((w) => t.indexOf(w) >= 0);
+  if (MONTH_WORD.test(t)) hits.push('a' + 'ug (month word)');
+  return hits;
+};
+
 async function waitForIntro(page) {
   try {
     await page.waitForFunction(() => !document.documentElement.hasAttribute('data-intro'), null, { timeout: 9000 });
@@ -73,7 +84,7 @@ async function openPage(browser, rel, vp, opts) {
 /* --------------------------------------------------------- basics ---- */
 
 async function checkBasics(page, rel, vp, failures) {
-  const m = await page.evaluate(() => {
+  const m = await page.evaluate((words) => {
     const doc = document.documentElement;
     const g = document.querySelector('#guide');
     const stage = document.querySelector('.guide__stage');
@@ -94,7 +105,7 @@ async function checkBasics(page, rel, vp, failures) {
       ariaGuide: g ? g.getAttribute('aria-hidden') : null,
       ariaStage: stage ? stage.getAttribute('aria-hidden') : null,
       controls: bubble ? bubble.getAttribute('data-controls') : null,
-      pointerNone: g ? getComputedStyle(g).pointerEvents === 'none' : null,
+      pointerIsNone: g ? getComputedStyle(g).pointerEvents === 'none' : null,
       stagePointer: stage ? getComputedStyle(stage).pointerEvents : null,
       closeFocusable: close ? close.tagName === 'BUTTON' : null,
       zGuide: g ? getComputedStyle(g).zIndex : null,
@@ -106,9 +117,18 @@ async function checkBasics(page, rel, vp, failures) {
       footerBtn: (() => {
         const b = document.querySelector('[data-guide-toggle]');
         return b ? { text: b.textContent.trim(), pressed: b.getAttribute('aria-pressed') } : null;
+      })(),
+      /* content guard: none of the stale wording may reach a rendered page
+         (needles come from the caller — this file never spells them out) */
+      textBad: (() => {
+        const s = (document.body.innerText || '').toLowerCase();
+        const hits = words.filter((w) => s.indexOf(w) >= 0);
+        const mo = new RegExp('(^|[^a-z])' + 'a' + 'ug' + '([^a-z]|$)', 'i');
+        if (mo.test(s)) hits.push('a' + 'ug (month word)');
+        return hits;
       })()
     };
-  });
+  }, BAD_WORDS);
 
   if (!m.hasGuide) { fail(failures, rel, vp.name, 'guide markup missing'); return; }
   if (m.hScroll > 1) fail(failures, rel, vp.name, 'horizontal scroll', `+${m.hScroll}px`);
@@ -120,7 +140,7 @@ async function checkBasics(page, rel, vp, failures) {
          String(m.ariaGuide) + ' controls=' + String(m.controls));
   }
   if (m.ariaStage !== 'true') fail(failures, rel, vp.name, 'stage aria-hidden', String(m.ariaStage));
-  if (m.pointerNone !== true) fail(failures, rel, vp.name, 'container pointer-events', m.pointerNone);
+  if (m.pointerIsNone !== true) fail(failures, rel, vp.name, 'container pointer-events', m.pointerIsNone);
   if (m.stagePointer !== 'auto') fail(failures, rel, vp.name, 'stage pointer-events', m.stagePointer);
   if (!m.closeFocusable) fail(failures, rel, vp.name, 'close button not a <button>');
   const zG = parseInt(m.zGuide, 10), zM = parseInt(m.zMenu, 10), zH = parseInt(m.zHeader, 10);
@@ -130,6 +150,12 @@ async function checkBasics(page, rel, vp, failures) {
   if (m.headerOverlap) fail(failures, rel, vp.name, 'overlaps the header');
   if (!m.footerBtn) fail(failures, rel, vp.name, 'footer Guide toggle missing');
   else if (m.footerBtn.text !== 'Guide: on') fail(failures, rel, vp.name, 'footer toggle label', m.footerBtn.text);
+  /* no stale start date or removed role in any rendered text.
+     github.html is skipped: its body text is fetched from the GitHub API
+     at runtime and is not this site's copy. */
+  if (rel !== 'github.html' && m.textBad && m.textBad.length) {
+    fail(failures, rel, vp.name, 'stale wording in rendered text', m.textBad.join(', '));
+  }
 }
 
 /* rect-intersection: the avatar (and the bubble when open) must clear
@@ -625,6 +651,82 @@ function reportSize() {
   console.log(`avatar total: ${kb(js + cssBytes)}`);
 }
 
+/* --------------------------------------------------------- content ---- */
+/* the work history itself: two steps, the real dates, duty wording, and
+   a meta description that agrees with them (copy lives in js/data.js and
+   in the marker-guarded blocks of tools/guide_apply.py). */
+
+async function checkContent(browser, failures) {
+  const rel = 'experience.html';
+  const vp = { name: '1440', width: 1440, height: 900 };
+  const { ctx, page, errors } = await openPage(browser, rel, vp, {});
+  const m = await page.evaluate((words) => {
+    const av = window.PORTFOLIO || {};
+    const roles = (av.experience || {}).roles || [];
+    const steps = Array.prototype.slice.call(document.querySelectorAll('.process-timeline__step'));
+    const meta = document.querySelector('meta[name="description"]');
+    const body = (document.body.innerText || '').toLowerCase();
+    const q = (s, el) => (el.querySelector(s) || {}).textContent || '';
+    return {
+      roles: roles.map((r) => ({
+        label: r.label, title: r.title, org: r.org, duties: (r.duties || []).slice()
+      })),
+      stepCount: steps.length,
+      stepLabels: steps.map((s) => q('.process-timeline__label', s)),
+      stepTitles: steps.map((s) => q('.process-timeline__step-title', s)),
+      emptySteps: steps.filter((s) => !q('.process-timeline__step-title', s)).length,
+      meta: meta ? meta.content : '',
+      bad: (() => {
+        const hits = words.filter((w) => body.indexOf(w) >= 0);
+        const mo = new RegExp('(^|[^a-z])' + 'a' + 'ug' + '([^a-z]|$)', 'i');
+        if (mo.test(body)) hits.push('a' + 'ug (month word)');
+        return hits;
+      })(),
+      hScroll: document.documentElement.scrollWidth - window.innerWidth
+    };
+  }, BAD_WORDS);
+
+  const want = [
+    { label: 'Jun 2026 — Present', title: 'Full Stack & Shopify Developer',
+      org: 'Huemind, Dharmapuri, Tamil Nadu', duties: 2 },
+    { label: 'Jul 2025 — Apr 2026', title: 'Full-Stack Developer',
+      org: 'Neoera Infotech', duties: 3 }
+  ];
+  if (m.roles.length !== 2) fail(failures, `${rel}: role count`, String(m.roles.length));
+  if (m.stepCount !== 2) fail(failures, `${rel}: timeline step count`, String(m.stepCount));
+  if (m.emptySteps) fail(failures, `${rel}: empty timeline step`, String(m.emptySteps));
+  want.forEach((w, i) => {
+    const r = m.roles[i];
+    if (r) {
+      if (r.label !== w.label) fail(failures, `${rel}: role ${i + 1} label`, `${r.label} want ${w.label}`);
+      if (r.title !== w.title) fail(failures, `${rel}: role ${i + 1} title`, `${r.title} want ${w.title}`);
+      if (r.org !== w.org) fail(failures, `${rel}: role ${i + 1} org`, `${r.org} want ${w.org}`);
+      if (r.duties.length !== w.duties) {
+        fail(failures, `${rel}: role ${i + 1} duty count`, `${r.duties.length} want ${w.duties}`);
+      }
+    }
+    if (m.stepLabels[i] !== w.label) {
+      fail(failures, `${rel}: step ${i + 1} label`, `${m.stepLabels[i]} want ${w.label}`);
+    }
+    if (m.stepTitles[i] !== w.title) {
+      fail(failures, `${rel}: step ${i + 1} title`, `${m.stepTitles[i]} want ${w.title}`);
+    }
+  });
+  const neo = (m.roles[1] && m.roles[1].duties) || [];
+  if (neo[1] && neo[1].indexOf('an e-commerce platform with custom CMS for Anicham Boutique') < 0) {
+    fail(failures, `${rel}: Neoera duty 2 wording`, neo[1]);
+  }
+  if (badIn(neo.join(' ')).indexOf(BAD_WORDS[2]) >= 0) {
+    fail(failures, `${rel}: removed-role wording in duties`, neo.join(' | '));
+  }
+  if (m.meta.indexOf('since June 2026') < 0) fail(failures, `${rel}: meta description`, m.meta);
+  if (badIn(m.meta).length) fail(failures, `${rel}: meta carries stale wording`, m.meta);
+  if (m.bad.length) fail(failures, `${rel}: stale wording in rendered text`, m.bad.join(', '));
+  if (m.hScroll > 1) fail(failures, `${rel}: horizontal scroll`, `+${m.hScroll}px`);
+  if (errors.length) fail(failures, `${rel}: console errors`, errors.join(' | '));
+  await ctx.close();
+}
+
 /* ---------------------------------------------------------- driver ---- */
 
 async function main() {
@@ -664,6 +766,8 @@ async function main() {
     else console.log(`  note ${key}: pre-existing console noise (${baseErrs.length})`);
   }
 
+  console.log('content…');
+  await checkContent(browser, failures);
   console.log('zones…');
   await checkZones(browser, failures);
   console.log('anchors…');

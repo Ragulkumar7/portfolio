@@ -16,6 +16,11 @@ CSS — the marked section of css/style.css (between the lines holding
 "marker: guide-avatar START" and "marker: guide-avatar END") is
 refreshed from tools/guide_avatar.css, again only inside the markers.
 
+COPY — page copy listed in BLOCKS (a meta description, a static
+paragraph) gets its own marker pair on the first run and is rewritten
+only between those markers afterwards, so no page text is ever edited
+outside a marker pair.
+
 Usage:
     py tools\\guide_apply.py            rewrite the marked regions
     py tools\\guide_apply.py --check    verify, write nothing
@@ -33,6 +38,30 @@ CSS_PATH = os.path.join(ROOT, 'css', 'style.css')
 CSS_FILE = os.path.join(ROOT, 'tools', 'guide_avatar.css')
 CSS_START = 'marker: guide-avatar START'
 CSS_END = 'marker: guide-avatar END'
+
+# managed page copy — a marker pair is planted once around each block and
+# only the text between the markers is rewritten afterwards, so page copy
+# is never edited outside a marker pair either. `find` locates the original
+# block on the first run (after that the markers are the only handle).
+def content_markers(bid):
+    return ('<!-- guide:%s:start -->' % bid, '<!-- guide:%s:end -->' % bid)
+
+
+BLOCKS = {
+    'experience.html': [(
+        'meta',
+        r'<meta name="description" content="[^"]*">',
+        '<meta name="description" content="Work history \u2014 Huemind (since June 2026) '
+        'and Neoera Infotech (July 2025 to April 2026): roles, dates and what I did.">'
+    )],
+    'services/web-apps.html': [(
+        'text',
+        r'<p class="just-text__paragraph" data-reveal="">PHP and MySQL[^<]*</p>',
+        '<p class="just-text__paragraph" data-reveal="">PHP and MySQL have run the '
+        'web&#x27;s back rooms for decades. They&#x27;re documented everywhere, hired '
+        'everywhere, and they don&#x27;t rewrite themselves every two years.</p>'
+    )],
+}
 
 # footer controls: planted once before the Back-to-top button, then only
 # rewritten between the markers on every later run. The tour link points
@@ -102,6 +131,29 @@ def transform_footer(text, rel, prefix=''):
     return new, 'marked'
 
 
+def transform_content(text, rel):
+    """Plant/refresh the managed copy blocks of one page (marker-guarded)."""
+    status = 'ok'
+    for bid, find, markup in BLOCKS.get(rel, []):
+        s, e = content_markers(bid)
+        if s in text and e in text:
+            i, j = text.index(s), text.index(e) + len(e)
+            if i > j:
+                raise SystemExit('%s: content markers out of order (%s)' % (rel, bid))
+            new = text[:i] + s + markup + e + text[j:]
+        else:
+            m = re.search(find, text)
+            if not m:
+                raise SystemExit('%s: managed block %r not found' % (rel, bid))
+            new = text[:m.start()] + s + markup + e + text[m.end():]
+            if status == 'ok':
+                status = 'marked'
+        if status == 'ok' and new != text:
+            status = 'refreshed'
+        text = new
+    return text, status
+
+
 def marker_region(lines, start_token, end_token, what):
     """Line indices of the marked region — both markers are required."""
     begin = None
@@ -154,16 +206,15 @@ def main():
             with io_open(path) as fh:
                 text = fh.read()
             new, status = transform_page(text, prefix, rel)
-            if status != 'ok':
+            new, status2 = transform_footer(new, rel, prefix)
+            new, status3 = transform_content(new, rel)
+            pending = next((s for s in (status, status2, status3) if s != 'ok'), 'ok')
+            if pending != 'ok':
                 changed += 1
-            new2, status2 = transform_footer(new, rel, prefix)
-            if status2 != 'ok':
-                changed += 1
-            if not check and (status != 'ok' or status2 != 'ok'):
+            if not check and pending != 'ok':
                 with io_open(path, 'w') as fh:
-                    fh.write(new2)
-            shown = status if status != 'ok' else status2
-            print('  %-8s %s' % (shown.upper() if check else shown, rel))
+                    fh.write(new)
+            print('  %-8s %s' % (pending.upper() if check else pending, rel))
 
     print('%s %d file(s)' % ('would change' if check else 'changed', changed))
 
