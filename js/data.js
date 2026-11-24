@@ -149,6 +149,7 @@
         theworldofnerds: 'The World of Nerds is a Shopify store for anime and pop-culture collectibles.',
         evarrah: 'Evarrah is a Shopify store.',
         opalline: 'Opalline is a Shopify store plus billing software.',
+        rupnidhi: 'Rupnidhi is a complete GST billing and inventory dashboard, with job-work challans and one-click GSTR exports.',
         v4startup: 'V4 Startup is a complete CRM with separate dashboards for admins, employees and clients.',
         voiceofjagadguru: 'Voice of Jagadguru is a complete website with a CMS the owners use to upload content themselves.'
       },
@@ -341,10 +342,10 @@
       {
         slug: 'rupnidhi', name: 'Rupnidhi',
         site: 'rupnidhi.com', url: 'https://rupnidhi.com',
-        type: 'Web app design & build', listType: 'Web app', platform: 'PHP · MySQL',
+        type: 'Billing software & dashboard', listType: 'Billing software', platform: 'PHP · MySQL',
         employer: '',
         year: 'TODO', role: 'TODO', client: 'TODO',
-        desc: 'POS and GST billing platform',
+        desc: 'Complete GST billing, inventory and manufacturing dashboard',
         altDesktop: 'Rupnidhi GST billing software dashboard on desktop',
         altMobile: 'Rupnidhi GST billing software on mobile'
       },
@@ -395,7 +396,7 @@
     about: {
       lead: 'I’m Ragul, a full-stack and Shopify developer. I build the whole thing: the database, the back end, the dashboards, the storefront and the pages people actually see. TODO: review',
       paras: [
-        'At Huemind, since June 2026, I build Shopify stores and Opalline, a billing software. Before that, at Neoera Infotech from July 2025 to April 2026, I built business platforms: Rupnidhi (POS and GST billing), Workack (CRM, HR and Sales dashboard), an e-commerce website with a custom CMS for Anicham Boutique, and a Blog CMS syndicating content across 3 websites. TODO: review',
+        'At Huemind, since June 2026, I build Shopify stores and Opalline, a billing software. Before that, at Neoera Infotech from July 2025 to April 2026, I built business platforms: Rupnidhi (GST billing, inventory and manufacturing dashboard), Workack (CRM, HR and Sales dashboard), an e-commerce website with a custom CMS for Anicham Boutique, and a Blog CMS syndicating content across 3 websites. TODO: review',
         'I’ve also built a complete CRM with separate dashboards for admins, employees and clients, and a complete website with a CMS so the team publishes content themselves. Design is part of the job, but only part of it. TODO: review'
       ],
       toolkit: ['React.js', 'TypeScript', 'JavaScript', 'Node.js', 'PHP', 'Shopify',
@@ -479,7 +480,7 @@
           org: 'Neoera Infotech',
           duties: [
             'Delivered 15+ production full-stack web projects for clients, including backend development, database design, hosting and deployment.',
-            'Engineered Rupnidhi (POS and GST billing), Workack (CRM, HR and Sales dashboard), an e-commerce platform with custom CMS for Anicham Boutique, and a Blog CMS syndicating content across 3 websites.',
+            'Engineered Rupnidhi (GST billing, inventory and manufacturing dashboard), Workack (CRM, HR and Sales dashboard), an e-commerce platform with custom CMS for Anicham Boutique, and a Blog CMS syndicating content across 3 websites.',
             'Built secure admin backends for Voice of Jagadguru and Divasprik, an Attendance Portal, V4Startup with a PSG variant, and responsive brand websites for Swarnalagna and Virmodello.'
           ],
           stack: 'TODO'
