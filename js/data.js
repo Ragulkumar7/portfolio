@@ -150,6 +150,7 @@
         evarrah: 'Evarrah is a Shopify store.',
         opalline: 'Opalline is a Shopify store plus billing software.',
         rupnidhi: 'Rupnidhi is a complete GST billing and inventory dashboard, with job-work challans and one-click GSTR exports.',
+        swarnalagna: 'Swarna Lagna is a complete matrimony platform with member dashboards and AI 10-Porutham matching.',
         v4startup: 'V4 Startup is a complete CRM with separate dashboards for admins, employees and clients.',
         voiceofjagadguru: 'Voice of Jagadguru is a complete website with a CMS the owners use to upload content themselves.'
       },
@@ -352,12 +353,12 @@
       {
         slug: 'swarnalagna', name: 'Swarna Lagna',
         site: 'swarnalagna.com', url: 'https://swarnalagna.com',
-        type: 'Website design & build', listType: 'Website', platform: 'Static site',
+        type: 'Matrimony platform & dashboards', listType: 'Matrimony platform', platform: 'React · REST API',
         employer: 'Neoera Infotech',
         year: 'TODO', role: 'TODO', client: 'TODO',
-        desc: 'Matrimony website',
-        altDesktop: 'Swarna Lagna matrimony website homepage on desktop',
-        altMobile: 'Swarna Lagna matrimony website on mobile'
+        desc: 'Complete matrimony platform with member dashboards and AI 10-Porutham matching',
+        altDesktop: 'Swarna Lagna matrimony platform dashboard on desktop',
+        altMobile: 'Swarna Lagna matrimony platform on mobile'
       },
       {
         slug: 'voiceofjagadguru', name: 'Voice of Jagadguru',
@@ -481,7 +482,7 @@
           duties: [
             'Delivered 15+ production full-stack web projects for clients, including backend development, database design, hosting and deployment.',
             'Engineered Rupnidhi (GST billing, inventory and manufacturing dashboard), Workack (CRM, HR and Sales dashboard), an e-commerce platform with custom CMS for Anicham Boutique, and a Blog CMS syndicating content across 3 websites.',
-            'Built secure admin backends for Voice of Jagadguru and Divasprik, an Attendance Portal, V4Startup with a PSG variant, and responsive brand websites for Swarnalagna and Virmodello.'
+            'Built secure admin backends for Voice of Jagadguru and Divasprik, an Attendance Portal, V4Startup with a PSG variant, the Swarnalagna matrimony platform with AI porutham matching, and a responsive brand website for Virmodello.'
           ],
           stack: 'TODO'
         }
